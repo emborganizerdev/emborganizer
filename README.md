@@ -1,31 +1,63 @@
-# EMBORGANIZER v5.3.1 — TurboThinker 24MB Brain-Parts Clean GUI
+# EMBORGANIZER v5.4 — TurboThinker Interactive Searcher GUI
 
-This build matches the latest **v5.3 brain-part SuperBrain** and removes the old/clutter UI from the visible Streamlit app.
+This build recreates the clean **v5.3.1 TurboThinker GUI** as **v5.4** and adds a new local **Interactive Searcher** page.
 
-## What is visible now
+## What is new in v5.4
+
+- **Interactive Searcher** page added to the sidebar.
+- Search by design number, neck type, work type, dress type, or features.
+- Uses Shiva teacher-memory rules for:
+  - cut work
+  - normal work
+  - net work
+  - rangoli work
+  - U-shaped neck
+  - drop/back-drop neck
+  - pot neck
+  - boat neck
+  - kurta/front-slit neck
+  - full hand and matching hand border
+- Searches saved teacher corrections and local training index rows.
+- Optional local folder scan for image files.
+- Teacher-confirmed examples are kept separate from lower-confidence draft records.
+
+## Teacher rules now built in
+
+### Cut work
+
+Cut work is identified by an **irregular/scallop/step inside border**. After stitching, cloth is cut along that shaped edge and it gives the cut-work finish.
+
+### Net work
+
+Net work is mainly used when a **drop/back-drop area** has vertical, hanging, or jali line filling. Do not call every line pattern net work.
+
+### Rangoli work
+
+Rangoli work has **kolam/rangoli-style diamond or geometric motifs** with loop/dot borders.
+
+### Normal work
+
+Normal work has smooth/regular embroidery borders and floral/motif filling without cut-work edge, net/drop filling, or rangoli geometry.
+
+### Neck shape and work type are separate
+
+Example: **U-shaped neck + cut work**, **pot neck + net work**, **drop neck + normal work**.
+
+## Visible pages
 
 - **Dashboard** — current engine/model status.
 - **TurboThinker GUI** — upload one image, predict tags/type, inspect reasons, save teacher correction.
+- **Interactive Searcher** — search teacher memory, corrections, training index, and optional local image folders.
 - **Teach / Train** — build seed + region rows from local ZIPs and retrain Student, UltraBrain, and SuperBrain.
 - **Brain Parts** — verify every `.brainpart` file is below 25 MB before GitHub upload.
 - **Settings** — version/path/model summary.
 
-## Removed from the visible UI
-
-- Google Drive sign-in/import screens.
-- Legacy converter pages.
-- Old image-generation/marketing panels.
-- Duplicate Streamlit native page sidebar.
-- Old v4/v5 mismatch banners.
-
-The supporting engine files remain local and modular, but the main app is now focused on training and using TurboThinker.
-
 ## Current versions
 
-- App: `v5.3.1`
-- UI: `TurboThinker 24MB Brain-Parts Clean GUI`
-- Brain: `TurboThinker SuperBrain v5.3`
-- Storage: 24MB brain parts under `imgs_training/models/shards/`
+- App: `v5.4`
+- UI: `TurboThinker Interactive Searcher GUI`
+- Brain compatibility: `TurboThinker SuperBrain v5.3` 24MB brain parts
+- Searcher: `TurboThinker Interactive Searcher v5.4`
 
 ## Run locally
 
@@ -40,35 +72,15 @@ or:
 python app.py
 ```
 
-## GitHub-safe brain parts
+## Important local rules
 
-The trained SuperBrain is stored as small brain parts:
+The app stays local-only:
 
-```text
-imgs_training/models/turbothinker_superbrain_v5_3_model.json
-imgs_training/models/shards/turbothinker_superbrain_v5_3_model/brain_part_0000.brainpart
-imgs_training/models/shards/turbothinker_superbrain_v5_3_model/manifest.json
-```
-
-Current check:
-
-```text
-brain_part_0000.brainpart = 23,063,127 bytes
-under 25 MB rule = PASSED
-GitHub normal 100 MB file rule = PASSED
-```
-
-If the brain grows later, the model store can split it into:
-
-```text
-brain_part_0000.brainpart
-brain_part_0001.brainpart
-brain_part_0002.brainpart
-```
-
-Every part should remain under 25 MB.
-
-## Local training rule
+- No external API.
+- No filename/title used as labels.
+- Teacher corrections are stronger than auto guesses.
+- Search can use filenames/design numbers only to find records, not to train labels.
+- Multi-design previews keep `multi_design_preview` as the first/primary mode when detected.
 
 Keep these local only. Do **not** push them to GitHub:
 
@@ -83,23 +95,19 @@ imgs_training/design_json/
 large seed banks if they grow too big
 ```
 
-The app stays local-only:
+## GitHub-safe brain parts
 
-- No external API.
-- No filename/title used as labels.
-- Teacher corrections are stronger than auto guesses.
-- Multi-design previews keep `multi_design_preview` as the first/primary mode when detected.
+The trained SuperBrain is stored as small brain parts:
 
-## Verify before GitHub push
+```text
+imgs_training/models/turbothinker_superbrain_v5_3_model.json
+imgs_training/models/shards/turbothinker_superbrain_v5_3_model/brain_part_0000.brainpart
+imgs_training/models/shards/turbothinker_superbrain_v5_3_model/manifest.json
+```
+
+Verify before GitHub push:
 
 ```bash
 python scripts/verify_model_shards.py
 python scripts/check_github_safety.py
-```
-
-Expected result:
-
-```text
-Brain-part size check: OK
-GitHub safety: OK
 ```

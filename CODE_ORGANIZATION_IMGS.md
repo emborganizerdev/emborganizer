@@ -47,3 +47,10 @@ Each `.brainpart` must stay below 25 MB.
 - No filename/title label learning.
 - Teacher corrections are stronger than auto guesses.
 - Raw ZIPs and libraries stay local, not GitHub.
+
+
+## v5.4 Interactive Searcher additions
+
+- `turbothinker_interactive_searcher.py` — Streamlit-free search engine for teacher memory, corrections, training index, and optional local image scans.
+- `teacher_search_memory_v5_4.json` — Shiva teacher rules and example labels for cut work, normal work, net work, rangoli, U-shaped neck, drop neck, pot neck, boat neck, and kurta designs.
+- `streamlit_app.py` — new `Interactive Searcher` page in the clean GUI.

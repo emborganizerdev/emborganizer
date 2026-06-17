@@ -97,8 +97,8 @@ except Exception:  # pragma: no cover
     predict_superbrain_vector = None
     superbrain_model_path = None
 
-IMGS_TRAINING_VERSION = "IMGS BetaV1 + TurboThinker SuperBrain Local Recognition Engine v5.3.1"
-TURBOTHINKER_ENGINE_VERSION = "TurboThinker v5.3.1 • 24MB brain-part SuperBrain + clean GUI + teacher correction loop"
+IMGS_TRAINING_VERSION = "IMGS BetaV1 + TurboThinker SuperBrain Local Recognition Engine v5.4"
+TURBOTHINKER_ENGINE_VERSION = "TurboThinker v5.4 • 24MB brain-part SuperBrain + interactive searcher + teacher correction loop"
 IMGS_TRAINING_TAG = "IMGS Engine"
 TURBOTHINKER_TAG = "TurboThinker Engine"
 IMGS_TRAINING_WARNING = (

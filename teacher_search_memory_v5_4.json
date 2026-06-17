@@ -1,0 +1,368 @@
+{
+  "version": "v5.4",
+  "title": "TurboThinker Teacher Search Memory",
+  "rules": [
+    {
+      "name": "cut_work",
+      "teacher_rule": "Cut work is identified by an irregular/scallop/step inside border that is stitched first and then cut along the shaped edge. Do not require net lines to call cut work."
+    },
+    {
+      "name": "net_work",
+      "teacher_rule": "Net work is mainly used when the design has a drop/back-drop area with vertical, hanging, or jali line filling. Do not call every line pattern net work."
+    },
+    {
+      "name": "rangoli_work",
+      "teacher_rule": "Rangoli work has kolam/rangoli-style diamond or geometric motifs with repeated loop/dot borders."
+    },
+    {
+      "name": "normal_work",
+      "teacher_rule": "Normal work has smooth/regular embroidery borders and floral/motif filling without cut-work edge, net/drop filling, or rangoli geometry."
+    },
+    {
+      "name": "neck_and_work_are_separate",
+      "teacher_rule": "Name the neck shape and the work type separately: U-shaped neck + cut work, pot neck + net work, drop neck + normal work, etc."
+    }
+  ],
+  "examples": [
+    {
+      "design_no": "HB2001",
+      "student_answer": "Cut-work floral design with irregular inside border",
+      "neck_type": "irregular_border",
+      "work_type": "cut_work",
+      "dress_type": "blouse",
+      "features": ["irregular inside border", "floral creeper", "scallop edge", "cut after stitching"],
+      "teacher_confirmed": true,
+      "notes": "Teacher rule: irregular inside border gives cut work after stitching and cutting."
+    },
+    {
+      "design_no": "HB2002",
+      "student_answer": "Boat neck and U-head neck reference with normal floral work",
+      "neck_type": "boat_neck, u_shaped_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["boat neck", "U-head neck", "floral border"],
+      "teacher_confirmed": true,
+      "notes": "Teacher corrected: second image has boat neck and U-head neck."
+    },
+    {
+      "design_no": "HB2018",
+      "student_answer": "Boat neck with full hand normal work",
+      "neck_type": "boat_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["boat neck", "full hand", "figure motif", "floral border"],
+      "teacher_confirmed": true,
+      "notes": "Teacher corrected: boat neck and has full hand."
+    },
+    {
+      "design_no": "HB2028",
+      "student_answer": "Back drop neck with normal floral embroidery work",
+      "neck_type": "back_drop_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["drop neck", "back drop", "normal floral work", "floral creeper"],
+      "teacher_confirmed": true,
+      "notes": "Teacher corrected: normal work of back drop, not cut work."
+    },
+    {
+      "design_no": "HB2029",
+      "student_answer": "Pot neck design",
+      "neck_type": "pot_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["pot neck", "floral border"],
+      "teacher_confirmed": true,
+      "notes": "Teacher provided direct label: pot neck."
+    },
+    {
+      "design_no": "HB2041",
+      "student_answer": "U-shaped neck rose floral embroidery full-hand design",
+      "neck_type": "u_shaped_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "rose flower butta", "full hand", "smooth border"],
+      "teacher_confirmed": true,
+      "notes": "Teacher corrected: not net work; net work only when drop neck is present."
+    },
+    {
+      "design_no": "HB2161",
+      "student_answer": "Boat neck normal floral embroidery with hanging/drop details",
+      "neck_type": "boat_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["boat neck", "floral border", "hanging/drop details", "matching hand border"],
+      "teacher_confirmed": true,
+      "notes": "Teacher reference used for boat neck style."
+    },
+    {
+      "design_no": "HB2257",
+      "student_answer": "U-shaped neck cut-work design with back drop and matching hand border",
+      "neck_type": "u_shaped_neck",
+      "work_type": "cut_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "cut work", "back drop", "irregular/scallop cut border", "matching hand border"],
+      "teacher_confirmed": true,
+      "notes": "Teacher corrected final answer: this is cut work."
+    },
+    {
+      "design_no": "HB2278",
+      "student_answer": "Drop neck with peacock motif and heavy floral embroidery full-hand design",
+      "neck_type": "drop_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["drop neck", "peacock pair", "heavy floral embroidery", "full hand", "scallop sleeve edge"],
+      "teacher_confirmed": true,
+      "notes": "Teacher corrected: not cut work; it is a drop neck."
+    },
+    {
+      "design_no": "HB2438",
+      "student_answer": "Kurta U-neck normal floral embroidery design",
+      "neck_type": "u_shaped_neck",
+      "work_type": "normal_work",
+      "dress_type": "kurta",
+      "features": ["kurta", "round/U neck", "small flowers", "leaf creeper", "body buttas"],
+      "teacher_confirmed": true,
+      "notes": "Teacher stated this is a kurta."
+    },
+    {
+      "design_no": "HB2449",
+      "student_answer": "Rangoli work with U-shaped neck and pointed back/drop style",
+      "neck_type": "u_shaped_neck, pointed_back_drop",
+      "work_type": "rangoli_work",
+      "dress_type": "blouse",
+      "features": ["rangoli", "kolam", "diamond motif", "loop-dot border", "pointed back/drop style"],
+      "teacher_confirmed": true,
+      "notes": "Teacher confirmed rangoli work."
+    },
+    {
+      "design_no": "HB2450",
+      "student_answer": "U-shaped neck cut-work full-hand design",
+      "neck_type": "u_shaped_neck",
+      "work_type": "cut_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "cut work", "full hand", "hanging/net-line detail", "floral border"],
+      "teacher_confirmed": true,
+      "notes": "Teacher corrected final answer: neck type is U-shaped, work is cut work."
+    },
+    {
+      "design_no": "HB2465",
+      "student_answer": "U-shaped blouse neck rangoli work design with matching hand border",
+      "neck_type": "u_shaped_neck",
+      "work_type": "rangoli_work",
+      "dress_type": "blouse",
+      "features": ["rangoli", "kolam", "diamond motif", "loop-dot border", "matching hand border"],
+      "teacher_confirmed": true,
+      "notes": "Rangoli work example."
+    },
+    {
+      "design_no": "HB2470",
+      "student_answer": "Back drop neck normal work with floral hand border",
+      "neck_type": "back_drop_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["back drop", "normal floral work", "lotus/floral motif", "matching hand border"],
+      "teacher_confirmed": true,
+      "notes": "Back drop normal work."
+    },
+    {
+      "design_no": "HB2472",
+      "student_answer": "Drop neck net work full-hand design",
+      "neck_type": "drop_neck",
+      "work_type": "net_work",
+      "dress_type": "blouse",
+      "features": ["drop neck", "net work", "vertical net-line panels", "full hand"],
+      "teacher_confirmed": true,
+      "notes": "Teacher confirmed this is net work."
+    },
+    {
+      "design_no": "HB2474",
+      "student_answer": "Kurta front-slit neck normal work design",
+      "neck_type": "front_slit_neck",
+      "work_type": "normal_work",
+      "dress_type": "kurta",
+      "features": ["kurta", "front slit", "simple dot border", "body buttas"],
+      "teacher_confirmed": true,
+      "notes": "Kurta front slit normal work."
+    },
+    {
+      "design_no": "HB2475",
+      "student_answer": "U-shaped neck normal floral work design",
+      "neck_type": "u_shaped_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "normal floral work", "leaf creeper", "matching hand border"],
+      "teacher_confirmed": true,
+      "notes": "Smooth border normal work."
+    },
+    {
+      "design_no": "HB2478",
+      "student_answer": "U-shaped neck floral embroidery design with hand work",
+      "neck_type": "u_shaped_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "floral embroidery", "matching hand motif"],
+      "teacher_confirmed": true,
+      "notes": "Normal floral work, not net/cut/rangoli."
+    },
+    {
+      "design_no": "HB2479",
+      "student_answer": "U-shaped neck cut-work floral full-hand design",
+      "neck_type": "u_shaped_neck",
+      "work_type": "cut_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "cut work", "floral rose/leaf", "full hand", "step/scallop border"],
+      "teacher_confirmed": true,
+      "notes": "Teacher corrected: this is cut work, not net work."
+    },
+    {
+      "design_no": "HB2483",
+      "student_answer": "Pot neck net work with floral border",
+      "neck_type": "pot_neck",
+      "work_type": "net_work",
+      "dress_type": "blouse",
+      "features": ["pot neck", "net work", "vertical hanging lines", "dots", "floral creeper border"],
+      "teacher_confirmed": true,
+      "notes": "Teacher corrected: pot neck and net work, not U-shaped/cut work."
+    },
+    {
+      "design_no": "HB2484",
+      "student_answer": "U-shaped neck normal work with floral border and back motif",
+      "neck_type": "u_shaped_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "normal floral border", "heavy back motif"],
+      "teacher_confirmed": true,
+      "notes": "Smooth U neck, normal work."
+    },
+    {
+      "design_no": "BH482",
+      "student_answer": "U-shaped cut-work neck with back drop net work and matching hand border",
+      "neck_type": "u_shaped_neck, back_drop_neck",
+      "work_type": "cut_work, net_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "cut work", "back drop net work", "diamond jali", "matching hand border"],
+      "teacher_confirmed": true,
+      "notes": "Main neck cut work; back-drop part has diamond net/jali."
+    },
+    {
+      "design_no": "BH484",
+      "student_answer": "U-shaped neck rangoli work with matching hand border",
+      "neck_type": "u_shaped_neck",
+      "work_type": "rangoli_work",
+      "dress_type": "blouse",
+      "features": ["rangoli", "kolam", "diamond motif", "loop-dot border", "matching hand border"],
+      "teacher_confirmed": true,
+      "notes": "Teacher confirmed rangoli work."
+    },
+    {
+      "design_no": "HB2227",
+      "student_answer": "Normal work motif design with cow/lotus floral concept",
+      "neck_type": "motif_panel",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["cow motif", "lotus", "floral concept"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    },
+    {
+      "design_no": "HB2228",
+      "student_answer": "U-shaped neck normal work full-hand design",
+      "neck_type": "u_shaped_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "normal work", "full hand"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    },
+    {
+      "design_no": "HB2230",
+      "student_answer": "U-shaped neck normal floral full-hand design",
+      "neck_type": "u_shaped_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "normal floral work", "full hand"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    },
+    {
+      "design_no": "HB2231",
+      "student_answer": "U-shaped neck normal floral work",
+      "neck_type": "u_shaped_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "normal floral work"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    },
+    {
+      "design_no": "HB2232",
+      "student_answer": "Boat neck normal work / designer floral work",
+      "neck_type": "boat_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["boat neck", "designer floral work"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    },
+    {
+      "design_no": "HB2233",
+      "student_answer": "Drop neck net work full-hand design",
+      "neck_type": "drop_neck",
+      "work_type": "net_work",
+      "dress_type": "blouse",
+      "features": ["drop neck", "net work", "full hand"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    },
+    {
+      "design_no": "HB2236",
+      "student_answer": "Drop neck normal work / designer drop work",
+      "neck_type": "drop_neck",
+      "work_type": "normal_work",
+      "dress_type": "blouse",
+      "features": ["drop neck", "designer drop", "normal work"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    },
+    {
+      "design_no": "HB2237",
+      "student_answer": "U-shaped cut-work floral design",
+      "neck_type": "u_shaped_neck",
+      "work_type": "cut_work",
+      "dress_type": "blouse",
+      "features": ["U-shaped neck", "cut work", "floral border"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    },
+    {
+      "design_no": "HB2238",
+      "student_answer": "Drop neck net work / pearl-line net work",
+      "neck_type": "drop_neck",
+      "work_type": "net_work",
+      "dress_type": "blouse",
+      "features": ["drop neck", "net work", "pearl lines"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    },
+    {
+      "design_no": "HB2239",
+      "student_answer": "Drop neck net work design",
+      "neck_type": "drop_neck",
+      "work_type": "net_work",
+      "dress_type": "blouse",
+      "features": ["drop neck", "net work"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    },
+    {
+      "design_no": "HB2240",
+      "student_answer": "Cut-work heavy floral full-hand design",
+      "neck_type": "designer_neck",
+      "work_type": "cut_work",
+      "dress_type": "blouse",
+      "features": ["cut work", "heavy floral", "full hand"],
+      "teacher_confirmed": false,
+      "notes": "Batch draft classification; review if needed."
+    }
+  ]
+}

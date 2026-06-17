@@ -1,7 +1,7 @@
 """
-EMBORGANIZER v5.3.1 Clean TurboThinker GUI
+EMBORGANIZER v5.4 Clean TurboThinker GUI + Interactive Searcher
 
-Clean local UI for the v5.3 24MB brain-part build.
+Clean local UI for the v5.4 24MB brain-part build with an interactive teacher-rule searcher.
 Removed old/clutter pages from the visible app: Google Drive, external sign-in,
 legacy converters, and extra marketing panels. This file focuses only on the
 workflow Shiva needs now:
@@ -10,7 +10,7 @@ workflow Shiva needs now:
 2. Test one image visually.
 3. Save teacher corrections.
 4. Train/retrain local brain from ZIP + corrections.
-5. Verify GitHub-safe 24MB brain parts.
+5. Search teacher memory, corrections, local images, and GitHub-safe 24MB brain parts.
 
 Local-only. No API. File names are never used as labels.
 """
@@ -89,10 +89,37 @@ try:
 except Exception:
     storage_summary = None
 
+try:
+    from turbothinker_interactive_searcher import (
+        SEARCHER_VERSION,
+        DRESS_TYPE_OPTIONS,
+        FEATURE_OPTIONS,
+        NECK_TYPE_OPTIONS,
+        WORK_TYPE_OPTIONS,
+        build_search_records,
+        infer_query_facets,
+        rule_cards,
+        search_records,
+        student_answer_for,
+        summarize_records,
+    )
+except Exception as exc:  # pragma: no cover
+    SEARCHER_VERSION = f"Interactive Searcher unavailable: {exc}"
+    DRESS_TYPE_OPTIONS = ["any"]
+    FEATURE_OPTIONS = ["any"]
+    NECK_TYPE_OPTIONS = ["any"]
+    WORK_TYPE_OPTIONS = ["any"]
+    build_search_records = None
+    infer_query_facets = None
+    rule_cards = None
+    search_records = None
+    student_answer_for = None
+    summarize_records = None
+
 
 APP_NAME = "EMBORGANIZER"
-APP_VERSION = "v5.3.1"
-APP_RELEASE = "TurboThinker 24MB Brain-Parts Clean GUI"
+APP_VERSION = "v5.4"
+APP_RELEASE = "TurboThinker Interactive Searcher GUI"
 APP_ROOT = Path(__file__).resolve().parent
 SUPPORTED_IMAGE_TYPES = ["png", "jpg", "jpeg", "webp", "bmp"]
 
@@ -318,10 +345,10 @@ def sidebar_nav() -> str:
         if logo.exists():
             st.image(str(logo), use_container_width=True)
         st.markdown(f"### {APP_NAME}")
-        st.caption(f"{APP_VERSION} · Clean TurboThinker GUI")
+        st.caption(f"{APP_VERSION} · Interactive Searcher GUI")
         nav = st.radio(
             "Navigation",
-            ["Dashboard", "TurboThinker GUI", "Teach / Train", "Brain Parts", "Settings"],
+            ["Dashboard", "TurboThinker GUI", "Interactive Searcher", "Teach / Train", "Brain Parts", "Settings"],
             label_visibility="collapsed",
         )
         st.divider()
@@ -338,6 +365,7 @@ def hero(title: str, text: str = "") -> None:
           <span class="emb-pill">{APP_VERSION}</span>
           <span class="emb-pill">24MB brain parts</span>
           <span class="emb-pill">TurboThinker SuperBrain</span>
+          <span class="emb-pill">Interactive Searcher</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -350,7 +378,7 @@ def hero(title: str, text: str = "") -> None:
 # -----------------------------
 
 def dashboard_page() -> None:
-    hero("TurboThinker SuperBrain", "Clean v5.3.1 GUI matched to the v5.3 24MB brain-part model.")
+    hero("TurboThinker SuperBrain", "Clean v5.4 GUI with teacher-rule interactive searcher and v5.3 24MB brain-part model compatibility.")
     st.info(IMGS_TRAINING_WARNING)
     s = load_all_summaries()
     seed_summary = (s.get("seed") or {}).get("summary") or {}
@@ -385,7 +413,7 @@ def dashboard_page() -> None:
         })
 
     st.markdown("#### Clean UI kept")
-    st.write("Dashboard · TurboThinker GUI · Teach/Train · Brain Parts · Settings")
+    st.write("Dashboard · TurboThinker GUI · Interactive Searcher · Teach/Train · Brain Parts · Settings")
     st.markdown("#### Removed from visible UI")
     st.write("Google Drive sign-in/import · legacy converter pages · old marketing/animation panels · duplicate Streamlit page sidebar")
 
@@ -466,6 +494,138 @@ def turbothinker_gui_page() -> None:
                 st.success(f"Saved selector training area: {saved.get('area_id')}")
 
 
+def interactive_searcher_page() -> None:
+    hero(
+        "Interactive Searcher",
+        "Search design numbers, neck names, work types, teacher rules, saved corrections, and local image folders.",
+    )
+    st.caption(str(SEARCHER_VERSION))
+    if build_search_records is None or search_records is None:
+        st.error("Interactive Searcher module is unavailable.")
+        return
+
+    with st.expander("Teacher rules used by v5.4", expanded=False):
+        cards = rule_cards(APP_ROOT) if rule_cards is not None else []
+        if cards:
+            for row in cards:
+                st.markdown(f"**{row.get('name')}** — {row.get('rule')}")
+        else:
+            st.info("No teacher-rule memory file found yet.")
+
+    st.markdown("### Search controls")
+    c0, c1, c2 = st.columns([1.25, 0.85, 0.85])
+    with c0:
+        query = st.text_input(
+            "Search words or design number",
+            placeholder="HB2257 cut work, pot neck net work, rangoli, kurta, drop neck...",
+        )
+    with c1:
+        work_type = st.selectbox("Work type", WORK_TYPE_OPTIONS, index=0)
+    with c2:
+        neck_type = st.selectbox("Neck type", NECK_TYPE_OPTIONS, index=0)
+
+    c3, c4, c5 = st.columns([0.85, 0.85, 1.3])
+    with c3:
+        dress_type = st.selectbox("Dress type", DRESS_TYPE_OPTIONS, index=0)
+    with c4:
+        feature = st.selectbox("Feature", FEATURE_OPTIONS, index=0)
+    with c5:
+        extra_dir = st.text_input("Optional folder to scan", placeholder="C:/designs or /home/me/designs")
+
+    c6, c7, c8, c9 = st.columns(4)
+    include_memory = c6.checkbox("Teacher memory", value=True)
+    include_corrections = c7.checkbox("Corrections", value=True)
+    include_index = c8.checkbox("Training index", value=True)
+    include_images = c9.checkbox("Scan image files", value=False)
+
+    c10, c11 = st.columns([0.85, 0.85])
+    confirmed_only = c10.checkbox("Teacher-confirmed only", value=False)
+    limit = c11.slider("Result limit", 5, 100, 30, 5)
+
+    extra_dirs = [extra_dir] if extra_dir.strip() else []
+    records = build_search_records(
+        APP_ROOT,
+        include_teacher_memory=include_memory,
+        include_corrections=include_corrections,
+        include_training_index=include_index,
+        include_local_images=include_images,
+        extra_dirs=extra_dirs,
+    )
+    summary = summarize_records(records) if summarize_records is not None else {"records": len(records)}
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Search records", f"{int(summary.get('records') or 0):,}")
+    m2.metric("Teacher-confirmed", f"{int(summary.get('teacher_confirmed') or 0):,}")
+    m3.metric("Work groups", f"{len(summary.get('by_work_type') or {})}")
+    m4.metric("Neck groups", f"{len(summary.get('by_neck_type') or {})}")
+
+    if infer_query_facets is not None and query.strip():
+        facets = infer_query_facets(query)
+        with st.expander("What the searcher understood from your query"):
+            st.json(facets)
+
+    results = search_records(
+        records,
+        query=query,
+        work_type=work_type,
+        neck_type=neck_type,
+        dress_type=dress_type,
+        feature=feature,
+        confirmed_only=confirmed_only,
+        limit=int(limit),
+    )
+
+    st.markdown(f"### Results ({len(results)})")
+    if not results:
+        st.warning("No matching design found. Try fewer filters or scan a local folder.")
+        return
+
+    compact_rows = []
+    for row in results:
+        compact_rows.append({
+            "design": row.get("design_no") or "",
+            "answer": student_answer_for(row) if student_answer_for is not None else row.get("student_answer"),
+            "neck": row.get("neck_type") or "",
+            "work": row.get("work_type") or "",
+            "dress": row.get("dress_type") or "",
+            "confirmed": bool(row.get("teacher_confirmed")),
+            "source": row.get("source") or "",
+            "score": row.get("search_score") or 0,
+        })
+    st.dataframe(compact_rows, use_container_width=True, hide_index=True)
+
+    st.markdown("### Result cards")
+    for i, row in enumerate(results[:20], start=1):
+        title = student_answer_for(row) if student_answer_for is not None else str(row.get("student_answer") or "Design")
+        with st.container(border=True):
+            c_img, c_text = st.columns([0.32, 1.0])
+            with c_img:
+                image_path = row.get("image_path")
+                if image_path and Path(str(image_path)).exists():
+                    st.image(str(image_path), use_container_width=True)
+                else:
+                    st.markdown("🧵")
+                    st.caption("No local preview")
+            with c_text:
+                confirmed = "✅ teacher confirmed" if row.get("teacher_confirmed") else "🟡 draft / local record"
+                st.markdown(f"#### {i}. {row.get('design_no') or 'Design'} — {title}")
+                st.caption(f"{confirmed} · {row.get('source')}")
+                cc1, cc2, cc3 = st.columns(3)
+                cc1.markdown(f"**Neck:** `{row.get('neck_type')}`")
+                cc2.markdown(f"**Work:** `{row.get('work_type')}`")
+                cc3.markdown(f"**Dress:** `{row.get('dress_type')}`")
+                features = row.get("features") or row.get("tags") or []
+                if features:
+                    st.write("Features: " + " · ".join(f"`{x}`" for x in list(features)[:16]))
+                if row.get("notes"):
+                    st.caption(str(row.get("notes")))
+                reasons = row.get("match_reasons") or []
+                if reasons:
+                    st.caption("Match: " + " | ".join(str(x) for x in reasons[:5]))
+
+    with st.expander("Search database summary"):
+        st.json(summary)
+
 def teach_train_page() -> None:
     hero("Teach / Train", "Build visual seed data from ZIPs and retrain the local brain. Corrections are stronger than auto guesses.")
     st.warning("For GitHub, do not commit raw ZIPs. Train locally, keep only under-25MB brain parts in the repo.")
@@ -539,7 +699,7 @@ def brain_parts_page() -> None:
     if status.get("parts"):
         st.dataframe(status["parts"], use_container_width=True, hide_index=True)
     st.markdown("#### GitHub-safe commands")
-    st.code("""git add streamlit_app.py imgs_training.py turbothinker_*.py imgs_training/models/shards/ imgs_training/models/turbothinker_superbrain_v5_3_model.json .gitignore .gitattributes README.md docs scripts\ngit commit -m \"Update clean v5.3 TurboThinker GUI and 24MB brain parts\"\ngit push""", language="bash")
+    st.code("""git add streamlit_app.py imgs_training.py turbothinker_*.py teacher_search_memory_v5_4.json imgs_training/models/shards/ imgs_training/models/turbothinker_superbrain_v5_3_model.json .gitignore .gitattributes README.md docs scripts\ngit commit -m \"Update clean v5.3 TurboThinker GUI and 24MB brain parts\"\ngit push""", language="bash")
     st.markdown("#### Keep these local only")
     st.code("""training ZIPs\nlibrary/\ncache/\nuploads/\nimgs_training/samples/\nimgs_training/crops/\nimgs_training/design_json/\nimgs_training/seed_training/ if it grows large""", language="text")
 
@@ -574,6 +734,8 @@ def main() -> None:
         dashboard_page()
     elif nav == "TurboThinker GUI":
         turbothinker_gui_page()
+    elif nav == "Interactive Searcher":
+        interactive_searcher_page()
     elif nav == "Teach / Train":
         teach_train_page()
     elif nav == "Brain Parts":
