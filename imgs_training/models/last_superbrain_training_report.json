@@ -1,0 +1,38 @@
+{
+  "exists": true,
+  "status": "trained",
+  "version": "TurboThinker SuperBrain v5.3 \u2022 24MB brain-part cortex + teacher GUI + failure diagnosis \u2022 no API",
+  "model_type": "local_superbrain_multicortex_capsule_knn_teacher_priority_24mb_brainparts",
+  "model_path": "/mnt/data/emb_v53_24mb/imgs_training/models/turbothinker_superbrain_v5_3_model.json",
+  "storage": {
+    "exists": true,
+    "storage": "json_brainparts",
+    "model_path": "/mnt/data/emb_v53_24mb/imgs_training/models/turbothinker_superbrain_v5_3_model.json",
+    "manifest": "shards/turbothinker_superbrain_v5_3_model/manifest.json",
+    "total_bytes": 23063127,
+    "shard_count": 1,
+    "max_shard_bytes": 23063127
+  },
+  "training_summary": {
+    "raw_rows": 1940,
+    "training_rows_after_visual_augmentation": 9700,
+    "correction_rows": 0,
+    "seed_rows": 1940,
+    "labels_with_capsules": 18,
+    "memory_rows": 5000,
+    "feature_count": 19,
+    "cortex_feature_count": 454,
+    "seconds": 11.192,
+    "github_safe_sharded_model": true,
+    "source_previous_model": "v5.1 SuperBrain trained from TR files",
+    "storage_rebuild_version": "v5.3",
+    "brain_part_target_bytes": 24000000,
+    "old_v5_2_brain_replaced": true
+  },
+  "output_labels": 34,
+  "memory_rows": 5000,
+  "cortex_feature_count": 454,
+  "trained_from_filename": false,
+  "source_name_used_for_label": false,
+  "created_at": "2026-06-17T05:00:08+00:00"
+}

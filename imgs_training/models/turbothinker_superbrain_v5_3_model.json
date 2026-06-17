@@ -1,0 +1,9 @@
+{
+  "sharded_model": true,
+  "format": "emborganizer-json-shards-v1",
+  "manifest": "shards/turbothinker_superbrain_v5_3_model/manifest.json",
+  "source_model_filename": "turbothinker_superbrain_v5_3_model.json",
+  "total_bytes": 23063127,
+  "shard_count": 1,
+  "note": "Model is split into local brain-part files under 25 MB each. Use turbothinker_model_store.load_json_model()."
+}

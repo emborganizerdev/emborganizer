@@ -1,0 +1,17 @@
+{
+  "format": "emborganizer-json-shards-v1",
+  "source_model_filename": "turbothinker_superbrain_v5_3_model.json",
+  "encoding": "utf-8-json-brainparts",
+  "total_bytes": 23063127,
+  "total_sha256": "b4e2001caeea35df05ac4c54806832b9aea12a34a9451069c6d1553772fbfe32",
+  "shard_size_target": 24000000,
+  "shard_count": 1,
+  "parts": [
+    {
+      "index": 0,
+      "file": "brain_part_0000.brainpart",
+      "bytes": 23063127,
+      "sha256": "b4e2001caeea35df05ac4c54806832b9aea12a34a9451069c6d1553772fbfe32"
+    }
+  ]
+}

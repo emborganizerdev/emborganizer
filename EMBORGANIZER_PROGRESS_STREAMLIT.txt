@@ -1,0 +1,65 @@
+EMBORGANIZER STREAMLIT PROGRESS LOG
+====================================
+Current milestone: v4.6 Turbo Import, TurboEmb v3, C++ native scan, Animation S
+
+Version progress:
+- v0.8.5: Original EMBORGANIZER app base; moved away from FastAPI runtime.
+- v1: Added Streamlit working app, previous-style GUI, TURBOEMB preview engine, C++ renderer with Python fallback, sharper 1080p previews.
+- v2: Focused on folder import; directory upload, ZIP fallback, folder preservation, duplicate controls, safer folder limits.
+- v3: Added direct converter URLs for DST/PES/JEF/EXP/VP3/HUS/XXX/EMB to PNG/JPG/WEBP.
+- v3.1: Fixed Streamlit page routing by adding the pages folder and converter page fallbacks.
+- v4: Added Google sign-in page and image quality selector profiles: 720p, 1080p, 2K, 4K, Custom.
+- v4.1: Rebuilt Google login to use safe login scopes.
+- v4.2: Added Google Drive connection page, Drive folder creation, library/progress/original/preview sync, and this progress .txt file.
+- v4.3: Rebuilt Drive sync so drive.file permission is requested during Google sign-in. This avoids /google-drive redirect_uri_mismatch. Added Enable Google Drive Sync toggle.
+- v4.4: Added server-side Google sign-in persistence under emborganizer_data_streamlit/auth_sessions and restore-on-rerun/page navigation.
+- v4.5: Launched Turbo Engine with TurboEmb v3 labels, 4K image generation defaults, and Animation v1 GUI motion.
+- v4.6: Added Turbo Import after startup/login, Google Drive design search, user-permission automatic import, optional C++ native manifest scanner, Python fallback, and Animation S UI.
+
+Google setup status:
+- Sign in: working with server-side saved session data.
+- Drive: permission is requested at sign-in with drive.file when enable_gdrive_sync=true.
+- Turbo Import: scans Drive-visible design files after login and imports only after user approval.
+- Optional full-Drive search: set google_drive.turbo_import_full_drive=true, then sign out and sign in again. This may require Google Cloud verification.
+
+Current Streamlit structure:
+- Main app: streamlit_app.py
+- Sign-in page: pages/sign-in.py
+- Google Drive page: pages/google-drive.py
+- Direct converter pages: pages/dst-to-png.py, pages/dst-to-jpg.py, pages/embroidery-to-image.py
+- Direct converter logic: direct_converter.py
+- Google login logic: google_auth.py
+- Google Drive sync/import logic: google_drive.py
+- Server auth persistence: google_server_auth_store.py
+- Turbo Engine: turboemb_engine.py + turboemb_cpp_renderer.cpp
+- Turbo Import: turbo_import_engine.py + turbo_import_native.cpp
+- Animation S metadata: animation_engine.py + static/animation_s.css
+- Quality selector: quality_profiles.py
+
+Current secrets pattern:
+[google_oauth]
+client_id = "YOUR_GOOGLE_CLIENT_ID"
+client_secret = "YOUR_GOOGLE_CLIENT_SECRET"
+redirect_uri = "https://emborganizer.streamlit.app"
+login_scopes = ["openid", "email", "profile"]
+enable_gdrive_sync = true
+strict_state = false
+debug = false
+
+[google_drive]
+enabled = true
+root_folder_name = "EMBORGANIZER"
+turbo_import_enabled = true
+turbo_import_scan_limit = 500
+turbo_import_full_drive = false
+
+[auth_session]
+enabled = true
+server_secret = "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
+max_age_days = 30
+
+Google Cloud redirect URI required:
+https://emborganizer.streamlit.app
+
+Important: after changing Drive scopes or secrets, sign out and sign in again to get the new permission.
+Never commit real secrets to GitHub.

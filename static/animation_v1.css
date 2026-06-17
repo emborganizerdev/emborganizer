@@ -1,0 +1,3 @@
+/* EMBORGANIZER Animation v1
+   Motion-safe Turbo Engine GUI helpers. Core styles are injected by streamlit_app.py. */
+:root { --animation-v1: 1; }

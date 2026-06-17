@@ -1,0 +1,42 @@
+{
+  "status": "trained",
+  "version": "TurboThinker UltraBrain v5.0 • local ensemble recognition brain • no API",
+  "model_type": "local_ensemble_logistic_prototype_knn_cooccurrence",
+  "model_path": "imgs_training/models/turbothinker_ultrabrain_v5_model.json",
+  "training_summary": {
+    "rows": 1940,
+    "seed_rows": 1940,
+    "correction_rows": 0,
+    "labels_with_positive_rows": 19,
+    "output_labels": 34,
+    "epochs": 55,
+    "requested_epochs": 220,
+    "seconds": 23.114
+  },
+  "feature_count": 19,
+  "augmented_feature_count": 89,
+  "output_labels": 34,
+  "labels_with_weights": 19,
+  "knn_memory_rows": 1600,
+  "trained_from_filename": false,
+  "source_name_used_for_label": false,
+  "top_positive_counts": {
+    "heavy_work": 1923,
+    "net_work": 1895,
+    "all_over_design": 1834,
+    "front_neck": 1747,
+    "boat_neck": 1524,
+    "heavy_outline": 1443,
+    "flowers": 1442,
+    "multi_design_preview": 1203,
+    "full_hand": 1180,
+    "hand_design": 953,
+    "butti": 906,
+    "border": 843,
+    "stitched_photo_reference": 408,
+    "pot_neck": 354,
+    "short_hand": 226,
+    "rangoli_design": 138
+  },
+  "created_at": "2026-06-17T04:52:08+00:00"
+}
