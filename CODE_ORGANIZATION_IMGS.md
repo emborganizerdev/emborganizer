@@ -1,56 +1,46 @@
-# EMBORGANIZER v5.3.1 Clean TurboThinker Code Organization
+# EMBORGANIZER v5.4.3 Code Organization
 
-## Main entry
+## Main GUI
 
-- `streamlit_app.py` — clean v5.3.1 Streamlit GUI focused only on TurboThinker training, prediction, correction, and brain-part verification.
-- `app.py` — local launcher for `streamlit run streamlit_app.py`.
+- `streamlit_app.py` — polished full-site Streamlit shell with custom sidebar navigation and pages.
+- `app.py` — local Streamlit launcher.
 
-## Recognition brain
+## Recognition / training
 
-- `imgs_training.py` — local image analysis, seed-bank training, correction saving, selector crop reader, and brain blending.
-- `turbothinker_student.py` — v4.9 trainable local Student model.
-- `turbothinker_ultrabrain.py` — v5.0 ensemble recognition brain.
-- `turbothinker_superbrain.py` — v5.3 SuperBrain cortex and teacher-correction priority.
-- `turbothinker_model_store.py` — JSON brain-part loader/saver with under-25MB shard support.
-- `imagesearch.py` — local fingerprint/similarity features.
+- `imgs_training.py` — IMGS/TurboThinker local image analysis, corrections, selector training, and model training helpers.
+- `turbothinker_student.py` — student memory layer.
+- `turbothinker_ultrabrain.py` — region/feature memory layer.
+- `turbothinker_superbrain.py` — stronger KNN-like local memory.
+- `turbothinker_interactive_searcher.py` — teacher-rule searcher.
+- `teacher_search_memory_v5_4.json` — corrected design naming memory.
 
-## Brain storage
+## Search / import / cache
 
-```text
-imgs_training/models/turbothinker_superbrain_v5_3_model.json
-imgs_training/models/shards/turbothinker_superbrain_v5_3_model/manifest.json
-imgs_training/models/shards/turbothinker_superbrain_v5_3_model/brain_part_0000.brainpart
-```
+- `imagesearch.py` — local fingerprint similarity engine.
+- `sync_engine.py` — local cache and manifest resync.
+- `sync_native.cpp` — optional C++ dedupe helper.
+- `library_manager.py` — maximum library manager helpers for filtering, relabeling, exports, backup, dedupe, and cleanup.
 
-Each `.brainpart` must stay below 25 MB.
+## Converter / renderer
 
-## Visible UI pages
+- `dst_converter.py` — restored DST/image converter and design reader helpers.
+- `turboemb_engine.py` — TurboEmb v3 C++/Python renderer bridge.
+- `turboemb_cpp_renderer.cpp` — native renderer for fast high-quality stitch previews.
 
-1. Dashboard
-2. TurboThinker GUI
-3. Teach / Train
-4. Brain Parts
-5. Settings
+## Google / Gmail
 
-## Hidden/removed from navigation
+- `drive_gmail_bridge.py` — local OAuth config, public Drive download, authenticated Drive browser helpers, Gmail profile/recent-header helpers.
+- `local_config/` — private local Google secrets/tokens, ignored by git.
 
-- Google Drive UI
-- Sign-in UI
-- Legacy converter UI
-- Old image-generation UI
-- Duplicate Streamlit native page sidebar
-- Old v4/v5 mismatch banners
+## Data folders
 
-## Local-only rules
+- `library/` — local imported images; ignored by git.
+- `cache/` — local search index/fingerprints; ignored by git.
+- `exports/` — converter outputs, backups, CSV/JSON exports; ignored by git.
+- `downloads/` — Drive downloads; ignored by git.
+- `imgs_training/design_json/`, `crops/`, `samples/`, `corrections.json` — local training data; ignored by git.
 
-- No API.
-- No filename/title label learning.
-- Teacher corrections are stronger than auto guesses.
-- Raw ZIPs and libraries stay local, not GitHub.
+## GitHub-safe model files
 
-
-## v5.4 Interactive Searcher additions
-
-- `turbothinker_interactive_searcher.py` — Streamlit-free search engine for teacher memory, corrections, training index, and optional local image scans.
-- `teacher_search_memory_v5_4.json` — Shiva teacher rules and example labels for cut work, normal work, net work, rangoli, U-shaped neck, drop neck, pot neck, boat neck, and kurta designs.
-- `streamlit_app.py` — new `Interactive Searcher` page in the clean GUI.
+- `imgs_training/models/` and `imgs_training/models/shards/` keep under-25MB brain parts.
+- Use `scripts/check_github_safety.py` before push.

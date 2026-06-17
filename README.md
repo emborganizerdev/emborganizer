@@ -1,63 +1,31 @@
-# EMBORGANIZER v5.4 — TurboThinker Interactive Searcher GUI
+# EMBORGANIZER v5.4.3 — Full Site Alive
 
-This build recreates the clean **v5.3.1 TurboThinker GUI** as **v5.4** and adds a new local **Interactive Searcher** page.
+Local-only embroidery organizer, training, converter, and image search site for Shiva Shanth.
 
-## What is new in v5.4
+## What is restored in v5.4.3
 
-- **Interactive Searcher** page added to the sidebar.
-- Search by design number, neck type, work type, dress type, or features.
-- Uses Shiva teacher-memory rules for:
-  - cut work
-  - normal work
-  - net work
-  - rangoli work
-  - U-shaped neck
-  - drop/back-drop neck
-  - pot neck
-  - boat neck
-  - kurta/front-slit neck
-  - full hand and matching hand border
-- Searches saved teacher corrections and local training index rows.
-- Optional local folder scan for image files.
-- Teacher-confirmed examples are kept separate from lower-confidence draft records.
+- Full polished Streamlit site navigation, not the broken default pages sidebar.
+- **DST to PNG Converter** restored as a main page.
+- **4K Design Reader** for stitch files and image analysis.
+- **Import Library** for image files, ZIPs, and local folders.
+- **Image Searcher** with divide-and-rule type filtering.
+- **TurboThinker GUI** for one-image visual reading.
+- **Interactive Searcher** using teacher naming rules.
+- **IMGS Training BETA** with corrections, weak-tag cleanup, and selector/crop training.
+- **Teach / Train** for local ZIP training and brain refresh.
+- **Maximum Library Manager** for filtering, previewing, relabeling, dedupe checks, exports, backups, and missing-file cleanup.
+- **Library Cache** for resync and fingerprint maintenance.
+- **Google Drive** page restored with local OAuth bridge and public Drive download support.
+- **Gmail Sign In** page restored for local Google/Gmail connection status and recent header preview.
+- **Brain Parts** page for under-25MB GitHub-safe model checks.
+- Loading animations across converter, searcher, reader, import, training, and cache tools.
 
-## Teacher rules now built in
+## Important local-only rules
 
-### Cut work
-
-Cut work is identified by an **irregular/scallop/step inside border**. After stitching, cloth is cut along that shaped edge and it gives the cut-work finish.
-
-### Net work
-
-Net work is mainly used when a **drop/back-drop area** has vertical, hanging, or jali line filling. Do not call every line pattern net work.
-
-### Rangoli work
-
-Rangoli work has **kolam/rangoli-style diamond or geometric motifs** with loop/dot borders.
-
-### Normal work
-
-Normal work has smooth/regular embroidery borders and floral/motif filling without cut-work edge, net/drop filling, or rangoli geometry.
-
-### Neck shape and work type are separate
-
-Example: **U-shaped neck + cut work**, **pot neck + net work**, **drop neck + normal work**.
-
-## Visible pages
-
-- **Dashboard** — current engine/model status.
-- **TurboThinker GUI** — upload one image, predict tags/type, inspect reasons, save teacher correction.
-- **Interactive Searcher** — search teacher memory, corrections, training index, and optional local image folders.
-- **Teach / Train** — build seed + region rows from local ZIPs and retrain Student, UltraBrain, and SuperBrain.
-- **Brain Parts** — verify every `.brainpart` file is below 25 MB before GitHub upload.
-- **Settings** — version/path/model summary.
-
-## Current versions
-
-- App: `v5.4`
-- UI: `TurboThinker Interactive Searcher GUI`
-- Brain compatibility: `TurboThinker SuperBrain v5.3` 24MB brain parts
-- Searcher: `TurboThinker Interactive Searcher v5.4`
+- No external AI/API is needed for image recognition or training.
+- File names are kept as record names, but the engine should not learn labels from file names.
+- Teacher corrections are stronger than auto guesses.
+- `local_config/`, `downloads/`, `library/`, `cache/`, and raw embroidery files stay local and are ignored by git.
 
 ## Run locally
 
@@ -66,48 +34,45 @@ pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
-or:
+Or:
 
 ```bash
 python app.py
 ```
 
-## Important local rules
+## DST to PNG converter
 
-The app stays local-only:
+The converter tries this order:
 
-- No external API.
-- No filename/title used as labels.
-- Teacher corrections are stronger than auto guesses.
-- Search can use filenames/design numbers only to find records, not to train labels.
-- Multi-design previews keep `multi_design_preview` as the first/primary mode when detected.
+1. Read stitch file with `pyembroidery` when available.
+2. If `pyembroidery` is missing and file is `.dst`, use the built-in DST reader fallback.
+3. Render with TurboEmb C++ if `g++`/`clang++` is available.
+4. Fall back to Python/Pillow rendering when C++ is unavailable.
 
-Keep these local only. Do **not** push them to GitHub:
+Supported upload extensions include DST, PES, JEF, EXP, VP3, XXX, U01, and PEC when `pyembroidery` is installed. The built-in fallback can read DST directly.
 
-```text
-training ZIPs
-library/
-cache/
-uploads/
-imgs_training/samples/
-imgs_training/crops/
-imgs_training/design_json/
-large seed banks if they grow too big
-```
+## Google Drive / Gmail
 
-## GitHub-safe brain parts
+Public Drive file download can work without OAuth for shareable file links.
 
-The trained SuperBrain is stored as small brain parts:
+Private Drive/Gmail needs your own local Google OAuth client. Save it inside the app UI; tokens and secrets are written to:
 
 ```text
-imgs_training/models/turbothinker_superbrain_v5_3_model.json
-imgs_training/models/shards/turbothinker_superbrain_v5_3_model/brain_part_0000.brainpart
-imgs_training/models/shards/turbothinker_superbrain_v5_3_model/manifest.json
+local_config/google_connections.json
 ```
 
-Verify before GitHub push:
+This folder is gitignored and must stay private.
 
-```bash
-python scripts/verify_model_shards.py
-python scripts/check_github_safety.py
-```
+## Teacher naming rules carried forward
+
+Examples from the corrected training conversation are included in the search memory:
+
+- Cut work: irregular inside border stitched, then cloth is cut along that border.
+- Net work: drop/back-drop style with jali or vertical net-line filling.
+- Rangoli work: kolam/rangoli-style diamond or geometric motifs with loop/dot border.
+- Normal work: smooth/regular embroidery without cut-work edge or net/drop identity.
+- Neck shape and work type are separate labels.
+
+## GitHub-safe note
+
+Before pushing, use **Brain Parts** and keep all large generated data local. The repository is designed to keep source code and under-25MB brain parts only.
