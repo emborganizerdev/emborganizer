@@ -80,7 +80,7 @@ except Exception:  # pragma: no cover
     ultrabrain_model_path = None
     ultrabrain_normalize_tag = None
 
-try:  # v5.1 larger local cortex + teacher GUI support
+try:  # v5.3.1 24MB brain-part cortex + clean teacher GUI support
     from turbothinker_superbrain import (
         SUPERBRAIN_VERSION,
         train_superbrain_model as _train_superbrain_model,
@@ -97,8 +97,8 @@ except Exception:  # pragma: no cover
     predict_superbrain_vector = None
     superbrain_model_path = None
 
-IMGS_TRAINING_VERSION = "IMGS BetaV1 + TurboThinker SuperBrain Local Recognition Engine v5.1"
-TURBOTHINKER_ENGINE_VERSION = "TurboThinker v2.1 / v5.1 • SuperBrain cortex + UltraBrain ensemble + teacher GUI"
+IMGS_TRAINING_VERSION = "IMGS BetaV1 + TurboThinker SuperBrain Local Recognition Engine v5.3.1"
+TURBOTHINKER_ENGINE_VERSION = "TurboThinker v5.3.1 • 24MB brain-part SuperBrain + clean GUI + teacher correction loop"
 IMGS_TRAINING_TAG = "IMGS Engine"
 TURBOTHINKER_TAG = "TurboThinker Engine"
 IMGS_TRAINING_WARNING = (
