@@ -1,5 +1,5 @@
 """
-EMBORGANIZER v5.4.3 Full Site Alive + Converters + Google Bridge
+EMBORGANIZER v5.4.4 DST-first Full Site Alive + Converters + Google Bridge
 
 Clean local UI for the v5.4 24MB brain-part build with an interactive teacher-rule searcher.
 Removed old/clutter pages from the visible app: Google Drive, external sign-in,
@@ -43,6 +43,7 @@ try:
         apply_student_model_memory,
         apply_ultrabrain_memory,
         apply_superbrain_memory,
+        apply_teacher_rule_pipeline,
         build_seed_training_corpus_from_zip_bytes,
         build_ultrabrain_region_corpus_from_zip_bytes,
         ensure_training_dirs,
@@ -69,6 +70,7 @@ except Exception as exc:  # pragma: no cover - Streamlit will display the issue.
     apply_student_model_memory = None
     apply_ultrabrain_memory = None
     apply_superbrain_memory = None
+    apply_teacher_rule_pipeline = None
     build_seed_training_corpus_from_zip_bytes = None
     build_ultrabrain_region_corpus_from_zip_bytes = None
     ensure_training_dirs = None
@@ -217,11 +219,12 @@ except Exception as exc:  # pragma: no cover
     save_google_config = None
 
 APP_NAME = "EMBORGANIZER"
-APP_VERSION = "v5.4.3"
-APP_RELEASE = "Full Site Alive + DST to PNG + Library Manager + Google Drive/Gmail + C++ 4K Reader"
+APP_VERSION = "v5.4.4"
+APP_RELEASE = "DST-first Full Site Alive + folder/ZIP import + meaningful reader + teacher-rule TurboThinker"
 APP_ROOT = Path(__file__).resolve().parent
 SUPPORTED_IMAGE_TYPES = ["png", "jpg", "jpeg", "webp", "bmp"]
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+EMBROIDERY_EXTENSIONS = set(SUPPORTED_EMB_EXTENSIONS or {".dst"})
 
 
 # -----------------------------
@@ -328,6 +331,8 @@ def _run_full_analysis(img: Image.Image, source_name: str) -> Dict[str, Any]:
     for fn in (apply_seed_training_memory, apply_student_model_memory, apply_ultrabrain_memory, apply_superbrain_memory):
         if fn is not None:
             analysis = fn(APP_ROOT, analysis)
+    if apply_teacher_rule_pipeline is not None:
+        analysis = apply_teacher_rule_pipeline(analysis)
     return analysis
 
 
@@ -440,6 +445,28 @@ def _show_prediction_card(analysis: Dict[str, Any]) -> None:
             if rows:
                 st.dataframe(rows, use_container_width=True, hide_index=True)
 
+
+def _show_identification_breakdown(analysis: Dict[str, Any]) -> None:
+    """Show the redesigned TurboThinker explanation in meaningful teacher language."""
+    pipe = analysis.get("teacher_rule_pipeline") or (analysis.get("prediction") or {}).get("teacher_rule_pipeline") or {}
+    if not pipe:
+        return
+    st.markdown("#### How TurboThinker identified it")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Shape / neck guess", str(pipe.get("neck_guess") or "unknown"))
+    c2.metric("Work guess", str(pipe.get("work_guess") or "normal_work"))
+    c3.metric("Mode", str(pipe.get("image_mode") or "single_design"))
+    st.caption(str(pipe.get("student_sentence") or "Shape first, work type second, motif/hand/drop details third."))
+    rows = []
+    for r in _as_list(pipe.get("rules")):
+        rows.append({
+            "rule": r.get("rule"),
+            "used": "YES" if r.get("fired") else "no",
+            "strength": r.get("strength"),
+            "why": r.get("detail"),
+        })
+    if rows:
+        st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
 # -----------------------------
@@ -727,6 +754,192 @@ def import_zip_to_library(
     return {"import_id": import_id, "items": items, "errors": errors, "index_count": len(index.get("items", []))}
 
 
+
+def _iter_zip_embroidery(payload: bytes, limit: int = 5000) -> Iterable[Tuple[str, bytes]]:
+    """Yield embroidery design files from a ZIP. DST is the main import source."""
+    with zipfile.ZipFile(io.BytesIO(payload)) as zf:
+        names = [n for n in zf.namelist() if not n.endswith("/") and Path(n).suffix.lower() in EMBROIDERY_EXTENSIONS]
+        for name in names[:int(limit)]:
+            try:
+                yield name, zf.read(name)
+            except Exception:
+                continue
+
+
+def _design_meaningful_summary(meta: Dict[str, Any], analysis: Dict[str, Any], source_kind: str = "dst") -> Dict[str, Any]:
+    """Small, human-readable summary so the app does not only show raw JSON bounds."""
+    pred = analysis.get("prediction") or {}
+    pipe = analysis.get("teacher_rule_pipeline") or pred.get("teacher_rule_pipeline") or {}
+    bounds = meta.get("bounds") or {}
+    reader = meta.get("reader") or {}
+    work = pipe.get("work_guess") or pred.get("predicted_type") or "unknown"
+    neck = pipe.get("neck_guess") or "unknown"
+    tags = _as_list(pred.get("tags"))[:10]
+    parts = []
+    if int(meta.get("stitches") or 0) > 0:
+        parts.append(f"{int(meta.get('stitches') or 0):,} stitches")
+    if meta.get("estimated_thread_colors") is not None:
+        parts.append(f"{meta.get('estimated_thread_colors')} thread colors")
+    if bounds.get("width") and bounds.get("height"):
+        parts.append(f"size {bounds.get('width')} × {bounds.get('height')} stitch units")
+    if meta.get("density_score") is not None:
+        parts.append(f"density {meta.get('density_score')}")
+    explanation = " · ".join(parts) if parts else "Rendered and analyzed locally."
+    return {
+        "source_type": source_kind,
+        "student_name": f"{neck} {work}".replace("unknown ", "").strip() or "unknown design",
+        "work_guess": work,
+        "neck_guess": neck,
+        "primary_label": pred.get("predicted_type") or "unknown_review",
+        "confidence": pred.get("confidence"),
+        "tags": tags,
+        "stitch_summary": explanation,
+        "reader": reader.get("reader") if isinstance(reader, dict) else reader,
+        "engine": meta.get("engine"),
+        "output_size": meta.get("output_size"),
+    }
+
+
+def _make_embroidery_record_from_meta(meta: Dict[str, Any], analysis: Dict[str, Any], fingerprint: Dict[str, Any], import_id: str, source_name: str, source: str) -> Dict[str, Any]:
+    preview = Path(str(meta.get("output_path") or ""))
+    rec = _make_design_record(image_path=preview, source_name=source_name, analysis=analysis, fingerprint=fingerprint, import_id=import_id)
+    rec.update({
+        "source": source,
+        "source_type": "embroidery_file",
+        "embroidery_path": str(meta.get("input_path") or ""),
+        "original_source_path": str(meta.get("input_path") or ""),
+        "preview_path": str(preview),
+        "image_path": str(preview),
+        "file_extension": Path(source_name).suffix.lower(),
+        "stitches": int(meta.get("stitches") or 0),
+        "estimated_thread_colors": meta.get("estimated_thread_colors"),
+        "density_score": meta.get("density_score"),
+        "bounds": meta.get("bounds") or {},
+        "reader": meta.get("reader") or {},
+        "converter_meta": meta,
+        "meaningful_summary": _design_meaningful_summary(meta, analysis, "dst/embroidery"),
+    })
+    return rec
+
+
+def import_embroidery_files_to_library(
+    files: List[Any],
+    *,
+    import_name: str = "dst_upload",
+    analyze: bool = True,
+    build_fingerprints: bool = True,
+    limit: int = 500,
+    render_size: int = 2048,
+    prefer_cpp: bool = True,
+) -> Dict[str, Any]:
+    """Main v5.4.4 import path: DST/PES/JEF/etc → render PNG → analyze → fingerprint → cache."""
+    import_id = f"dst_{_utc_stamp()}_{hashlib.sha1(import_name.encode('utf-8','ignore')).hexdigest()[:8]}"
+    out_dir = _library_dir() / "imports" / import_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    items: List[Dict[str, Any]] = []
+    errors: List[Dict[str, str]] = []
+    for uploaded in files[:int(limit)]:
+        try:
+            name = getattr(uploaded, "name", "design.dst")
+            raw = uploaded.getvalue()
+            meta = convert_uploaded_bytes(raw, name, out_dir, size=int(render_size), output_format="PNG", prefer_cpp=prefer_cpp)
+            preview_path = Path(str(meta.get("output_path") or ""))
+            with Image.open(preview_path) as im:
+                img = ImageOps.exif_transpose(im).convert("RGB")
+            analysis = _run_full_analysis(img, name) if analyze else {}
+            fp = create_fingerprint_from_path(preview_path) if build_fingerprints and create_fingerprint_from_path is not None else {}
+            rec = _make_embroidery_record_from_meta(meta, analysis, fp, import_id, name, "dst_imported_library")
+            _json_write(_design_json_dir() / f"{rec['id']}.json", rec)
+            items.append(rec)
+        except Exception as exc:
+            errors.append({"file": getattr(uploaded, "name", "uploaded"), "error": str(exc)[:240]})
+    index = _upsert_index_items(items)
+    _append_import_log({"import_id": import_id, "name": import_name, "source_type": "embroidery_files", "items": len(items), "errors": errors, "created_at": datetime.now(timezone.utc).isoformat()})
+    if sync_library_cache is not None and items:
+        try:
+            sync_library_cache(APP_ROOT, index.get("items", []))
+        except Exception:
+            pass
+    return {"import_id": import_id, "items": items, "errors": errors, "index_count": len(index.get("items", []))}
+
+
+def import_embroidery_zip_to_library(
+    payload: bytes,
+    *,
+    zip_name: str,
+    analyze: bool = True,
+    build_fingerprints: bool = True,
+    limit: int = 500,
+    render_size: int = 2048,
+    prefer_cpp: bool = True,
+) -> Dict[str, Any]:
+    import_id = f"dstzip_{_utc_stamp()}_{hashlib.sha1(zip_name.encode('utf-8','ignore')).hexdigest()[:8]}"
+    out_dir = _library_dir() / "imports" / import_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    items: List[Dict[str, Any]] = []
+    errors: List[Dict[str, str]] = []
+    for name, raw in _iter_zip_embroidery(payload, int(limit)):
+        try:
+            meta = convert_uploaded_bytes(raw, Path(name).name, out_dir, size=int(render_size), output_format="PNG", prefer_cpp=prefer_cpp)
+            meta["source_zip"] = zip_name
+            meta["zip_member"] = name
+            preview_path = Path(str(meta.get("output_path") or ""))
+            with Image.open(preview_path) as im:
+                img = ImageOps.exif_transpose(im).convert("RGB")
+            analysis = _run_full_analysis(img, Path(name).name) if analyze else {}
+            fp = create_fingerprint_from_path(preview_path) if build_fingerprints and create_fingerprint_from_path is not None else {}
+            rec = _make_embroidery_record_from_meta(meta, analysis, fp, import_id, Path(name).name, "dst_zip_imported_library")
+            rec["zip_member"] = name
+            rec["source_zip"] = zip_name
+            _json_write(_design_json_dir() / f"{rec['id']}.json", rec)
+            items.append(rec)
+        except Exception as exc:
+            errors.append({"file": name, "error": str(exc)[:240]})
+    index = _upsert_index_items(items)
+    _append_import_log({"import_id": import_id, "name": zip_name, "source_type": "embroidery_zip", "items": len(items), "errors": errors, "created_at": datetime.now(timezone.utc).isoformat()})
+    if sync_library_cache is not None and items:
+        try:
+            sync_library_cache(APP_ROOT, index.get("items", []))
+        except Exception:
+            pass
+    return {"import_id": import_id, "items": items, "errors": errors, "index_count": len(index.get("items", []))}
+
+
+def scan_embroidery_folder_to_index(folder: str, *, analyze: bool = True, build_fingerprints: bool = True, limit: int = 2000, render_size: int = 2048, prefer_cpp: bool = True) -> Dict[str, Any]:
+    root = Path(folder).expanduser()
+    if not root.exists() or not root.is_dir():
+        return {"items": [], "errors": [{"folder": str(root), "error": "folder not found"}], "index_count": len(_load_search_index().get("items", []))}
+    import_id = f"dstfolder_{_utc_stamp()}"
+    out_dir = _library_dir() / "imports" / import_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    items: List[Dict[str, Any]] = []
+    errors: List[Dict[str, str]] = []
+    paths = [p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in EMBROIDERY_EXTENSIONS]
+    for path in paths[:int(limit)]:
+        try:
+            meta = render_embroidery_file(path, out_dir / f"{path.stem}_{int(time.time()*1000)}_{int(render_size)}px.png", size=int(render_size), output_format="PNG", prefer_cpp=prefer_cpp)
+            meta.update({"input_path": str(path), "input_name": path.name, "input_sha1": hashlib.sha1(path.read_bytes()).hexdigest()})
+            preview_path = Path(str(meta.get("output_path") or ""))
+            with Image.open(preview_path) as im:
+                img = ImageOps.exif_transpose(im).convert("RGB")
+            analysis = _run_full_analysis(img, path.name) if analyze else {}
+            fp = create_fingerprint_from_path(preview_path) if build_fingerprints and create_fingerprint_from_path is not None else {}
+            rec = _make_embroidery_record_from_meta(meta, analysis, fp, import_id, path.name, "dst_scanned_folder")
+            rec["folder_source"] = str(root)
+            _json_write(_design_json_dir() / f"{rec['id']}.json", rec)
+            items.append(rec)
+        except Exception as exc:
+            errors.append({"file": str(path), "error": str(exc)[:240]})
+    index = _upsert_index_items(items)
+    if sync_library_cache is not None and items:
+        try:
+            sync_library_cache(APP_ROOT, index.get("items", []))
+        except Exception:
+            pass
+    _append_import_log({"import_id": import_id, "name": str(root), "source_type": "embroidery_folder", "items": len(items), "errors": errors[:25], "created_at": datetime.now(timezone.utc).isoformat()})
+    return {"items": items, "errors": errors[:50], "index_count": len(index.get("items", []))}
+
+
 def scan_folder_to_index(folder: str, *, analyze: bool = False, build_fingerprints: bool = True, limit: int = 2000) -> Dict[str, Any]:
     root = Path(folder).expanduser()
     if not root.exists() or not root.is_dir():
@@ -818,11 +1031,17 @@ def animated_stepper(title: str, steps: List[str], active: int = 0) -> None:
 def _preview_import_rows(items: List[Dict[str, Any]], limit: int = 30) -> List[Dict[str, Any]]:
     rows = []
     for item in items[:limit]:
+        ms = item.get("meaningful_summary") or {}
         rows.append({
             "design": item.get("design_no"),
+            "source": item.get("source_type") or item.get("source"),
+            "student_name": ms.get("student_name") or item.get("primary_label"),
             "label": item.get("primary_label"),
-            "work": item.get("work_type"),
-            "neck": item.get("neck_type"),
+            "work": ms.get("work_guess") or item.get("work_type"),
+            "neck": ms.get("neck_guess") or item.get("neck_type"),
+            "stitches": item.get("stitches"),
+            "colors": item.get("estimated_thread_colors"),
+            "summary": ms.get("stitch_summary"),
             "mode": item.get("image_mode"),
             "tags": ", ".join(_as_list(item.get("tags"))[:8]),
         })
@@ -993,7 +1212,7 @@ def hero(title: str, text: str = "") -> None:
 # -----------------------------
 
 def dashboard_page() -> None:
-    hero("EMBORGANIZER Full Site", "v5.4.3 restores the full site: DST to PNG converter, 4K C++ design reader, Import Library, Image Searcher, IMGS Training BETA, Interactive Searcher, Google Drive/Gmail sign pages, Maximum Library Manager, cache tools, and loading animations.")
+    hero("EMBORGANIZER Full Site", "v5.4.4 restores the full site with DST as the main import source: DST/PES/JEF folder import, ZIP import, 4K C++ reader, meaningful design summaries, Image Searcher, TurboThinker teacher-rule identification, Google Drive/Gmail, Library Manager, cache tools, and loading animations.")
     st.info(IMGS_TRAINING_WARNING)
     with animated_loader("Loading TurboThinker brain status…", "Checking seed bank, corrections, SuperBrain memory, and 24MB brain parts", small=True):
         s = load_all_summaries()
@@ -1029,7 +1248,7 @@ def dashboard_page() -> None:
         })
 
     st.markdown("#### Clean UI kept")
-    st.write("Dashboard · Import Library · Image Searcher · TurboThinker GUI · Interactive Searcher · IMGS Training BETA · Teach/Train · Library Cache · Brain Parts · Settings")
+    st.write("Dashboard · DST Import Library · DST/Image Searcher · TurboThinker GUI · Interactive Searcher · IMGS Training BETA · Teach/Train · Library Cache · Brain Parts · Settings")
     st.markdown("#### Removed from visible UI")
     st.write("Only external API/sign-in pages remain hidden. Local import, local image search, local training, selector reader, and cache pages are restored inside the clean main GUI.")
 
@@ -1052,6 +1271,7 @@ def turbothinker_gui_page() -> None:
         st.session_state["last_image"] = img
         st.session_state["last_source_name"] = uploaded.name
         _show_prediction_card(analysis)
+        _show_identification_breakdown(analysis)
 
     st.divider()
     st.markdown("### Teacher correction")
@@ -1249,42 +1469,101 @@ def interactive_searcher_page() -> None:
 
 
 def import_library_page() -> None:
-    hero("Import Library", "Bring back the full site import flow: upload images or ZIPs, analyze locally, fingerprint them, and build the searchable cache.")
-    animated_stepper("Import pipeline", ["Upload", "Analyze", "Fingerprint", "Index", "Search ready"], active=0)
-    st.info("Local-only import. File name is saved as a record name, but the label comes from visual analysis and teacher correction.")
+    hero("DST Import Library", "DST/PES/JEF/etc. are now the main source. The app renders stitch files to PNG, reads stitch stats, runs TurboThinker, builds fingerprints, and stores meaningful searchable records.")
+    animated_stepper("DST import pipeline", ["Upload/Folder", "Render DST", "Read design", "Fingerprint", "Index"], active=0)
+    st.info("Local-only import. File name is saved only as a record name; the design label comes from rendered visual analysis + teacher rules/corrections.")
 
-    mode = st.radio("Import source", ["Image files", "ZIP file", "Scan local folder"], horizontal=True)
-    c1, c2, c3, c4 = st.columns(4)
+    emb_types = sorted([x.lstrip(".") for x in EMBROIDERY_EXTENSIONS])
+    mode = st.radio(
+        "Import source",
+        ["DST / embroidery files", "ZIP of DST / embroidery", "Scan local DST folder", "Image files (legacy)", "Image ZIP (legacy)", "Scan image folder (legacy)"],
+        horizontal=False,
+    )
+    c1, c2, c3, c4, c5 = st.columns(5)
     analyze = c1.checkbox("Auto visual analysis", value=True)
     build_fp = c2.checkbox("Build fingerprints", value=True)
     limit = c3.number_input("Import limit", min_value=1, max_value=100000, value=300, step=50)
-    show_preview = c4.checkbox("Show imported table", value=True)
+    render_size = int(c4.selectbox("DST render size", ["1024", "2048", "4096"], index=1))
+    prefer_cpp = c5.checkbox("C++ Turbo", value=True)
+    show_preview = st.checkbox("Show imported table", value=True)
 
-    if mode == "Image files":
+    if mode == "DST / embroidery files":
+        files = st.file_uploader("Upload DST/PES/JEF/etc. files", type=emb_types, accept_multiple_files=True, key="import_dst_files")
+        if files and st.button("Import DST files to searchable library", type="primary"):
+            bar = st.progress(0, text="Preparing DST import…")
+            animated_stepper("DST import pipeline", ["Upload", "Render", "Read", "Fingerprint", "Search ready"], active=1)
+            with animated_loader("Importing DST files…", "Rendering stitch files, reading density/colors/bounds, and building local search cache"):
+                bar.progress(15, text="Uploaded DST files")
+                result = import_embroidery_files_to_library(files, import_name="dst_upload", analyze=analyze, build_fingerprints=build_fp, limit=int(limit), render_size=render_size, prefer_cpp=prefer_cpp)
+                bar.progress(100, text="DST import complete")
+            st.success(f"Imported {len(result.get('items', [])):,} stitch designs. Search index now has {result.get('index_count', 0):,} records.")
+            if result.get("errors"):
+                st.warning(f"Some DST files could not import: {len(result['errors'])}")
+                st.dataframe(result["errors"], use_container_width=True, hide_index=True)
+            if show_preview and result.get("items"):
+                st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
+                for item in result["items"][:6]:
+                    with st.container(border=True):
+                        cc1, cc2 = st.columns([0.38, 1.0])
+                        with cc1:
+                            pth = Path(str(item.get("preview_path") or item.get("image_path") or ""))
+                            if pth.exists():
+                                st.image(str(pth), use_container_width=True)
+                        with cc2:
+                            st.markdown(f"#### {item.get('source_name')}")
+                            st.write((item.get("meaningful_summary") or {}).get("stitch_summary") or "Rendered DST preview.")
+                            st.write("Tags: " + " · ".join(f"`{x}`" for x in _as_list(item.get("tags"))[:10]))
+
+    elif mode == "ZIP of DST / embroidery":
+        zip_file = st.file_uploader("Upload ZIP containing DST/PES/JEF/etc.", type=["zip"], key="import_dst_zip")
+        if zip_file and st.button("Import DST ZIP to searchable library", type="primary"):
+            bar = st.progress(0, text="Opening DST ZIP…")
+            animated_stepper("DST ZIP pipeline", ["Upload", "Extract DST", "Render", "Fingerprint", "Index"], active=1)
+            with animated_loader("Importing DST ZIP…", "Extracting stitch files, rendering previews, analyzing, and indexing"):
+                bar.progress(12, text="ZIP uploaded")
+                result = import_embroidery_zip_to_library(zip_file.getvalue(), zip_name=zip_file.name, analyze=analyze, build_fingerprints=build_fp, limit=int(limit), render_size=render_size, prefer_cpp=prefer_cpp)
+                bar.progress(100, text="DST ZIP import complete")
+            st.success(f"Imported {len(result.get('items', [])):,} stitch designs from ZIP. Search index now has {result.get('index_count', 0):,} records.")
+            if result.get("errors"):
+                with st.expander("Import errors"):
+                    st.dataframe(result["errors"], use_container_width=True, hide_index=True)
+            if show_preview and result.get("items"):
+                st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
+
+    elif mode == "Scan local DST folder":
+        folder = st.text_input("Local folder path containing DST/PES/JEF/etc.", placeholder="C:/designs/dst or /home/me/designs")
+        st.caption("Folder path works when you run EMBORGANIZER on your own computer/server. Browser folder upload is handled by the file uploader/ZIP import.")
+        if st.button("Scan DST folder into search cache", type="primary"):
+            if not folder.strip():
+                st.warning("Enter a local folder path first.")
+            else:
+                with animated_loader("Scanning DST folder…", "Rendering every stitch file, reading stats, and updating cache"):
+                    result = scan_embroidery_folder_to_index(folder, analyze=analyze, build_fingerprints=build_fp, limit=int(limit), render_size=render_size, prefer_cpp=prefer_cpp)
+                st.success(f"Added {len(result.get('items', [])):,} stitch records. Search index now has {result.get('index_count', 0):,} records.")
+                if result.get("errors"):
+                    with st.expander("Scan errors"):
+                        st.dataframe(result["errors"], use_container_width=True, hide_index=True)
+                if show_preview and result.get("items"):
+                    st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
+
+    elif mode == "Image files (legacy)":
         files = st.file_uploader("Upload one or more embroidery images", type=SUPPORTED_IMAGE_TYPES, accept_multiple_files=True, key="import_images")
         if files and st.button("Import images to searchable library", type="primary"):
-            bar = st.progress(0, text="Preparing import…")
-            animated_stepper("Import pipeline", ["Upload", "Analyze", "Fingerprint", "Index", "Search ready"], active=1)
+            bar = st.progress(0, text="Preparing image import…")
             with animated_loader("Importing images…", "Saving images, reading visually, and creating local fingerprints"):
-                bar.progress(18, text="Reading uploaded images")
                 result = import_images_to_library(files, import_name="image_upload", analyze=analyze, build_fingerprints=build_fp, limit=int(limit))
                 bar.progress(100, text="Import complete")
             st.success(f"Imported {len(result.get('items', [])):,} images. Search index now has {result.get('index_count', 0):,} records.")
             if result.get("errors"):
-                st.warning(f"Some files could not import: {len(result['errors'])}")
                 st.dataframe(result["errors"], use_container_width=True, hide_index=True)
             if show_preview and result.get("items"):
                 st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
 
-    elif mode == "ZIP file":
+    elif mode == "Image ZIP (legacy)":
         zip_file = st.file_uploader("Upload ZIP of embroidery images", type=["zip"], key="import_zip")
-        if zip_file and st.button("Import ZIP to searchable library", type="primary"):
-            bar = st.progress(0, text="Opening ZIP…")
-            animated_stepper("Import pipeline", ["Upload", "Extract", "Analyze", "Fingerprint", "Index"], active=1)
-            with animated_loader("Importing ZIP…", "Extracting images, analyzing design type, and building cache fingerprints"):
-                bar.progress(12, text="ZIP uploaded")
+        if zip_file and st.button("Import image ZIP to searchable library", type="primary"):
+            with animated_loader("Importing image ZIP…", "Extracting images, analyzing design type, and building fingerprints"):
                 result = import_zip_to_library(zip_file.getvalue(), zip_name=zip_file.name, analyze=analyze, build_fingerprints=build_fp, limit=int(limit))
-                bar.progress(100, text="ZIP import complete")
             st.success(f"Imported {len(result.get('items', [])):,} images from ZIP. Search index now has {result.get('index_count', 0):,} records.")
             if result.get("errors"):
                 with st.expander("Import errors"):
@@ -1293,12 +1572,12 @@ def import_library_page() -> None:
                 st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
 
     else:
-        folder = st.text_input("Local folder path to scan", placeholder="C:/designs or /home/me/designs")
-        if st.button("Scan folder into search cache", type="primary"):
+        folder = st.text_input("Local image folder path to scan", placeholder="C:/designs/previews or /home/me/designs")
+        if st.button("Scan image folder into search cache", type="primary"):
             if not folder.strip():
                 st.warning("Enter a local folder path first.")
             else:
-                with animated_loader("Scanning local folder…", "Reading images and adding them to the fast search cache"):
+                with animated_loader("Scanning image folder…", "Reading images and adding them to the fast search cache"):
                     result = scan_folder_to_index(folder, analyze=analyze, build_fingerprints=build_fp, limit=int(limit))
                 st.success(f"Added {len(result.get('items', [])):,} records. Search index now has {result.get('index_count', 0):,} records.")
                 if result.get("errors"):
@@ -1310,9 +1589,10 @@ def import_library_page() -> None:
     st.divider()
     index = _load_search_index()
     items = _as_list(index.get("items"))
+    dst_count = sum(1 for x in items if str(x.get("source_type") or "").startswith("embroidery") or str(x.get("file_extension") or "").lower() in EMBROIDERY_EXTENSIONS)
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Cached designs", f"{len(items):,}")
-    c2.metric("Cache file", "found" if _search_index_path().exists() else "missing")
+    c2.metric("DST/stitch records", f"{dst_count:,}")
     c3.metric("Design JSON", f"{len(list(_design_json_dir().glob('*.json'))):,}")
     c4.metric("Image search", "ready" if compare_fingerprints is not None else "missing")
 
@@ -1321,46 +1601,76 @@ def import_library_page() -> None:
 
 
 def image_searcher_page() -> None:
-    hero("Image Searcher", "Upload a query image and search visually through your imported local library cache.")
+    hero("DST / Image Searcher", "Search the local library with a DST/PES/JEF file or an image. DST queries are rendered first, then classified and matched against cached previews.")
     st.caption(str(IMAGE_SEARCH_VERSION))
     index = _load_search_index()
     total = len(_as_list(index.get("items")))
     if total == 0:
-        st.warning("Your image search cache is empty. Use Import Library first, then come back here.")
-    c1, c2, c3 = st.columns(3)
+        st.warning("Your search cache is empty. Use Import Library first, then come back here.")
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("Search cache", f"{total:,}")
     strict_type = c2.checkbox("Divide-and-rule type filter", value=True, help="First classify the query, then search matching type/tag records first.")
     limit = c3.slider("Top matches", 5, 80, 20, 5)
+    render_size = int(c4.selectbox("DST query render", ["1024", "2048", "4096"], index=1))
 
-    uploaded = st.file_uploader("Upload query image to search", type=SUPPORTED_IMAGE_TYPES, key="query_image_searcher")
-    if not uploaded:
-        st.caption("This is the previous local Image Searcher idea restored: upload query image → visual read → fingerprint → match cache.")
-        return
-    img = _image_from_upload(uploaded)
+    query_kind = st.radio("Search by", ["DST / embroidery file", "Image file"], horizontal=True)
+    img: Optional[Image.Image] = None
+    source_name = "query"
+    query_meta: Dict[str, Any] = {}
+
+    if query_kind == "DST / embroidery file":
+        emb_types = sorted([x.lstrip(".") for x in EMBROIDERY_EXTENSIONS])
+        uploaded = st.file_uploader("Upload query DST/PES/JEF/etc.", type=emb_types, key="query_dst_searcher")
+        if not uploaded:
+            st.caption("Upload a DST file → render → TurboThinker identifies → IMGS searches imported cache.")
+            return
+        out_dir = _exports_dir("query_dst")
+        with animated_loader("Rendering query DST…", "Converting stitch file to clean PNG before search", small=True):
+            query_meta = convert_uploaded_bytes(uploaded.getvalue(), uploaded.name, out_dir, size=render_size, output_format="PNG", prefer_cpp=True)
+        source_name = uploaded.name
+        with Image.open(str(query_meta.get("output_path"))) as im:
+            img = ImageOps.exif_transpose(im).convert("RGB")
+    else:
+        uploaded = st.file_uploader("Upload query image to search", type=SUPPORTED_IMAGE_TYPES, key="query_image_searcher")
+        if not uploaded:
+            st.caption("Upload query image → visual read → fingerprint → match cache.")
+            return
+        img = _image_from_upload(uploaded)
+        source_name = uploaded.name
+
     left, right = st.columns([0.8, 1.2])
     with left:
-        st.image(img, caption=uploaded.name, use_container_width=True)
+        st.image(img, caption=source_name, use_container_width=True)
+        if query_meta:
+            st.caption(_design_meaningful_summary(query_meta, {}, "query_dst").get("stitch_summary"))
     with right:
-        animated_stepper("Searcher pipeline", ["Read query", "Classify", "Fingerprint", "Filter cache", "Rank matches"], active=1)
-        with animated_loader("Searching visually…", "TurboThinker is classifying first, then IMGS is comparing fingerprints"):
-            result = search_index_by_image(img, uploaded.name, limit=int(limit), strict_type=strict_type)
+        animated_stepper("Searcher pipeline", ["Render/read", "Classify", "Fingerprint", "Filter cache", "Rank matches"], active=1)
+        with animated_loader("Searching visually…", "TurboThinker is identifying first, then IMGS compares fingerprints"):
+            result = search_index_by_image(img, source_name, limit=int(limit), strict_type=strict_type)
+        if query_meta:
+            result["query_meta"] = query_meta
         _show_prediction_card(result.get("query_analysis") or {})
+        _show_identification_breakdown(result.get("query_analysis") or {})
         st.success(f"Searched {result.get('searched', 0):,} filtered candidates from {result.get('index_total', 0):,} cached records.")
 
     results = result.get("results") or []
     st.markdown(f"### Top matches ({len(results)})")
     if not results:
-        st.info("No visual match found yet. Import more images or turn off divide-and-rule type filter.")
+        st.info("No visual match found yet. Import more DST designs or turn off divide-and-rule type filter.")
         return
     table = []
     for row in results:
+        ms = row.get("meaningful_summary") or {}
         table.append({
             "design": row.get("design_no"),
             "score": row.get("match_score"),
             "match": row.get("match_label"),
+            "source": row.get("source_type") or row.get("source"),
+            "student_name": ms.get("student_name") or row.get("primary_label"),
             "label": row.get("primary_label"),
-            "work": row.get("work_type"),
-            "neck": row.get("neck_type"),
+            "work": ms.get("work_guess") or row.get("work_type"),
+            "neck": ms.get("neck_guess") or row.get("neck_type"),
+            "stitches": row.get("stitches"),
             "path": row.get("relative_path") or row.get("image_path"),
         })
     st.dataframe(table, use_container_width=True, hide_index=True)
@@ -1369,14 +1679,17 @@ def image_searcher_page() -> None:
         with st.container(border=True):
             c_img, c_text = st.columns([0.35, 1.0])
             with c_img:
-                path = Path(str(row.get("image_path") or ""))
+                path = Path(str(row.get("image_path") or row.get("preview_path") or ""))
                 if path.exists():
                     st.image(str(path), use_container_width=True)
                 else:
                     st.caption("Preview missing")
             with c_text:
                 st.markdown(f"#### {i}. {row.get('design_no')} — {row.get('match_score')}%")
-                st.caption(f"{row.get('match_label')} · {row.get('primary_label')} · {row.get('source')}")
+                ms = row.get("meaningful_summary") or {}
+                st.caption(f"{row.get('match_label')} · {ms.get('student_name') or row.get('primary_label')} · {row.get('source')}")
+                if ms.get("stitch_summary"):
+                    st.write(ms.get("stitch_summary"))
                 st.write("Tags: " + " · ".join(f"`{x}`" for x in _as_list(row.get("tags"))[:14]))
                 match = row.get("match") or {}
                 with st.expander("Verification details"):
@@ -1384,6 +1697,7 @@ def image_searcher_page() -> None:
                         "algorithm": match.get("algorithm"),
                         "parts": match.get("parts"),
                         "verification": match.get("verification"),
+                        "meaningful_summary": ms,
                     })
 
 
@@ -1405,6 +1719,7 @@ def imgs_training_beta_page() -> None:
             st.session_state["imgs_beta_image"] = img
             st.session_state["imgs_beta_name"] = uploaded.name
             _show_prediction_card(analysis)
+            _show_identification_breakdown(analysis)
 
         pred = analysis.get("prediction") or {}
         thinker = analysis.get("turbothinker") or {}
@@ -1766,6 +2081,7 @@ def design_reader_4k_page() -> None:
             with animated_loader("TurboThinker reading rendered design…", "Detecting work type, neck style, motifs, and training tags", small=True):
                 analysis = _run_full_analysis(analysis_img, out.name)
             _show_prediction_card(analysis)
+            _show_identification_breakdown(analysis)
     else:
         f = st.file_uploader("Upload image for 4K visual read", type=SUPPORTED_IMAGE_TYPES, key="reader_img")
         if not f:
@@ -1778,6 +2094,7 @@ def design_reader_4k_page() -> None:
             with animated_loader("TurboThinker reading image…", "Detecting design class and features", small=True):
                 analysis = _run_full_analysis(img, f.name)
             _show_prediction_card(analysis)
+            _show_identification_breakdown(analysis)
 
 
 def maximum_library_manager_page() -> None:

@@ -97,8 +97,8 @@ except Exception:  # pragma: no cover
     predict_superbrain_vector = None
     superbrain_model_path = None
 
-IMGS_TRAINING_VERSION = "IMGS BetaV1 + TurboThinker SuperBrain Local Recognition Engine v5.4"
-TURBOTHINKER_ENGINE_VERSION = "TurboThinker v5.4 • 24MB brain-part SuperBrain + interactive searcher + teacher correction loop"
+IMGS_TRAINING_VERSION = "IMGS BetaV1 + TurboThinker SuperBrain Local Recognition Engine v5.4.4"
+TURBOTHINKER_ENGINE_VERSION = "TurboThinker v5.4.4 • DST-first reader + teacher-rule decision pipeline + 24MB SuperBrain"
 IMGS_TRAINING_TAG = "IMGS Engine"
 TURBOTHINKER_TAG = "TurboThinker Engine"
 IMGS_TRAINING_WARNING = (
@@ -428,8 +428,8 @@ def _pixel_foreground_score(r: int, g: int, b: int, bg: Tuple[float, float, floa
     br, bgc, bb = bg
     dist = math.sqrt((r - br) ** 2 + (g - bgc) ** 2 + (b - bb) ** 2)
     spread = max(r, g, b) - min(r, g, b)
-    lum = (r * 0.299) + (g * 2487) + (b * 0.114)
-    bg_lum = (br * 0.299) + (bgc * 2487) + (bb * 0.114)
+    lum = (r * 0.299) + (g * 0.587) + (b * 0.114)
+    bg_lum = (br * 0.299) + (bgc * 0.587) + (bb * 0.114)
     # Distance from the estimated background is the main signal.
     score = dist / 255.0
     # Colorful thread on dark/white background gets a boost.
@@ -488,7 +488,7 @@ def _resize_for_fast_analysis(img: Image.Image, max_side: int) -> Image.Image:
 
 def _looks_like_center_watermark_pixel(r: int, g: int, b: int) -> bool:
     """Softly ignore pale preview title/watermark strokes without reading filenames."""
-    lum = (r * 0.299) + (g * 2487) + (b * 0.114)
+    lum = (r * 0.299) + (g * 0.587) + (b * 0.114)
     spread = max(r, g, b) - min(r, g, b)
     # Most HB/sample watermarks are pale green/white/pink text over a dark background.
     pale = lum > 112 and spread < 118
@@ -661,7 +661,7 @@ def extract_visual_features(img: Image.Image) -> Dict[str, Any]:
     # Simple net hint: many alternating row/column peaks and high edge compared with mass.
     row_peaks = sum(1 for v in rows if v > density * 1.45 and v > 0.035)
     col_peaks = sum(1 for v in cols if v > density * 1.45 and v > 0.035)
-    net_score = min(1.0, ((row_peaks + col_peaks) / 30.0) * 245 + max(0.0, edge - density) * 1.8)
+    net_score = min(1.0, ((row_peaks + col_peaks) / 30.0) * 0.45 + max(0.0, edge - density) * 1.8)
     scattered_score = min(1.0, component_count / 26.0)
     density_name = "light"
     if density > 0.19:
@@ -679,7 +679,7 @@ def extract_visual_features(img: Image.Image) -> Dict[str, Any]:
         region_estimate = 4
     elif component_count >= 16 and scattered_score > 0.34:
         region_estimate = 3
-    layout_complexity = min(1.0, (component_count / 60.0) * 245 + scattered_score * 0.25 + net_score * 0.20)
+    layout_complexity = min(1.0, (component_count / 60.0) * 0.45 + scattered_score * 0.25 + net_score * 0.20)
 
     return {
         "source_size": [w0, h0],
@@ -735,15 +735,15 @@ def _score_labels(features: Dict[str, Any]) -> Dict[str, float]:
 
     # Global/collage/photo hints.
     if estimated_regions >= 4 or (original_aspect > 1.45 and coverage > 0.35 and comps > 10):
-        scores["multi_design_preview"] += 242
+        scores["multi_design_preview"] += 0.62
         scores["heavy_work"] += 0.10
-    if density > 0.18 or (density > 0.13 and comps > 12) or layout_complexity > 248:
+    if density > 0.18 or (density > 0.13 and comps > 12) or layout_complexity > 0.48:
         scores["heavy_work"] += 0.42
         scores["all_over_design"] += 0.25
     if scattered > 0.38 and density < 0.20:
         scores["butti"] += 0.34
         scores["all_over_design"] += 0.18
-    if hsym > 0.64 and vsym > 0.48 and aspect < 1.35 and scattered < 245:
+    if hsym > 0.64 and vsym > 0.48 and aspect < 1.35 and scattered < 0.245:
         scores["rangoli_design"] += 0.32
 
     # Net/cut hints.
@@ -752,7 +752,7 @@ def _score_labels(features: Dict[str, Any]) -> Dict[str, float]:
         # true net work a strong score, but soften it for narrow partial-neck
         # previews where the visual sign is mostly a side corner border.
         net_bonus = 0.45
-        if aspect < 0.82 and coverage < 245:
+        if aspect < 0.82 and coverage < 0.245:
             net_bonus = 0.18
             scores["front_neck"] += 0.18
         scores["net_design"] += net_bonus
@@ -774,7 +774,7 @@ def _score_labels(features: Dict[str, Any]) -> Dict[str, float]:
         scores["border"] += 0.18
         if density > 0.12:
             scores["back_neck"] += 0.14
-    elif aspect < 245:
+    elif aspect < 0.75:
         scores["full_hand"] += 0.38
         scores["short_hand"] += 0.22
     elif aspect < 0.82:
@@ -782,7 +782,7 @@ def _score_labels(features: Dict[str, Any]) -> Dict[str, float]:
         scores["back_neck"] += 0.20
         # A tall narrow shape can be sleeve/full-hand, but if coverage is low
         # and it has a curved corner, keep front neck ahead for Type-1 previews.
-        scores["full_hand"] += 0.10 if coverage < 240 else 0.15
+        scores["full_hand"] += 0.10 if coverage < 0.240 else 0.15
 
     # U/neck-ish distribution: ink on sides/bottom with center opening.
     side_bias = max(0.0, ((left + right) / 2.0) - center)
@@ -813,7 +813,7 @@ def _score_labels(features: Dict[str, Any]) -> Dict[str, float]:
         scores["full_hand"] += 0.10 if comps < 10 else 0.18
 
     # Stitched/photo reference: high texture spread/collage-like images. Hard to detect with PIL only.
-    if density > 0.22 and edge > 0.16 and coverage > 240:
+    if density > 0.22 and edge > 0.16 and coverage > 0.240:
         scores["stitched_photo_reference"] += 0.16
 
     return {k: round(max(0.0, min(1.0, v)), 4) for k, v in scores.items()}
@@ -1005,7 +1005,7 @@ def _vector_distance(a: List[float], b: List[float]) -> float:
     if n <= 0:
         return 99.0
     # Weighted Euclidean-ish distance for compact local correction memory.
-    weights = [1.1, 1.0, 0.8, 1.0, 0.75, 0.7, 245, 245, 245, 24, 0.65, 24, 24, 0.65, 24, 0.45, 0.45]
+    weights = [1.1, 1.0, 0.8, 1.0, 0.75, 0.7, 0.45, 0.45, 0.45, 0.40, 0.65, 0.40, 0.40, 0.65, 0.40, 0.45, 0.45]
     s = 0.0
     wsum = 0.0
     for i in range(n):
@@ -1120,7 +1120,7 @@ def infer_turbothinker_parts(features: Dict[str, Any]) -> Dict[str, Any]:
     max_files = 1
     wide_multi_hint = aspect >= 1.12 and (len(active_zones) >= 4 or coverage > 0.16)
     zone_multi_hint = len(active_zones) >= 6 and coverage > 0.10
-    strong_region_multi = est_regions >= 4 and not (aspect < 0.85 and coverage < 245)
+    strong_region_multi = est_regions >= 4 and not (aspect < 0.85 and coverage < 0.245)
     if strong_region_multi or wide_multi_hint or zone_multi_hint:
         image_mode = "multi_design_preview"
         min_files = 4 if strong_region_multi or len(active_zones) >= 4 else 3
@@ -1167,6 +1167,97 @@ def infer_turbothinker_parts(features: Dict[str, Any]) -> Dict[str, Any]:
         "note": "Local heuristic only. User correction in Training Center is the final label.",
     }
 
+
+def teacher_rule_breakdown(features: Dict[str, Any], prediction: Dict[str, Any], turbothinker: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Transparent decision pipeline used in v5.4.4.
+
+    It shows how the local reader identifies a design: shape first, then work type,
+    then motifs/parts. Teacher corrections still override this local guess.
+    """
+    turbothinker = turbothinker or {}
+    z = features.get("zone_density") or {}
+    density = float(features.get("ink_density") or 0.0)
+    edge = float(features.get("edge_strength") or 0.0)
+    net = float(features.get("net_score") or 0.0)
+    aspect = float(features.get("aspect") or 1.0)
+    coverage = float(features.get("ink_coverage") or 0.0)
+    comps = int(features.get("component_count") or 0)
+    left = float(z.get("left") or 0.0)
+    center = float(z.get("center") or 0.0)
+    right = float(z.get("right") or 0.0)
+    bottom = float(z.get("bottom") or 0.0)
+    mid = float(z.get("middle") or 0.0)
+    hsym = float(features.get("horizontal_symmetry") or 0.0)
+    vsym = float(features.get("vertical_symmetry") or 0.0)
+    rules: List[Dict[str, Any]] = []
+
+    def add(name: str, fired: bool, detail: str, strength: float = 0.0) -> None:
+        rules.append({"rule": name, "fired": bool(fired), "strength": round(float(strength), 3), "detail": detail})
+
+    side_bias = max(0.0, ((left + right) / 2.0) - center)
+    bottom_bias = max(0.0, bottom - mid * 0.75)
+    is_drop = bool(coverage > 0.20 and center < ((left + right) / 2.6 if (left + right) else 1.0) and bottom_bias > 0.002)
+    is_u = bool(side_bias > 0.006 and bottom_bias > 0.004 and 0.55 <= aspect <= 1.55)
+    is_boat = bool(aspect > 1.25 and side_bias > 0.003 and not is_drop)
+    is_pot = bool(is_u and bottom_bias > side_bias * 0.75 and net > 0.18)
+    is_net = bool(is_drop and net > 0.24) or bool(net > 0.52 and aspect > 0.85)
+    is_cut = bool(edge > max(0.10, density * 1.35) and not is_net and coverage > 0.12)
+    is_rangoli = bool(hsym > 0.62 and vsym > 0.45 and comps >= 10 and density < 0.18)
+    is_normal = not any([is_net, is_cut, is_rangoli])
+
+    add("DST/image preprocessing", True, "Render/read first, then analyze visual layout; filename is never used as the label.", 1.0)
+    add("U-shaped neck clue", is_u, f"side/bottom border is stronger than center opening: side_bias={side_bias:.3f}, bottom_bias={bottom_bias:.3f}", side_bias + bottom_bias)
+    add("Drop/back-drop clue", is_drop, f"center opening is clear and lower/side border surrounds it: center={center:.3f}, coverage={coverage:.3f}", coverage)
+    add("Boat neck clue", is_boat, f"wide shallow layout: aspect={aspect:.2f}, side_bias={side_bias:.3f}", min(1.0, aspect / 3.0))
+    add("Pot neck clue", is_pot, f"rounded U/pot-style lower curve plus line structure: net_score={net:.2f}, bottom_bias={bottom_bias:.3f}", net)
+    add("Net work clue", is_net, f"net/jali is accepted mainly with drop/back-drop or very strong repeated lines: net_score={net:.2f}, drop={is_drop}", net)
+    add("Cut work clue", is_cut, f"irregular/scallop-style stitched edge is inferred from edge-vs-density: edge={edge:.3f}, density={density:.3f}", edge)
+    add("Rangoli clue", is_rangoli, f"symmetry + geometric component spread: hsym={hsym:.2f}, vsym={vsym:.2f}, components={comps}", min(1.0, comps / 40.0))
+    add("Normal embroidery fallback", is_normal, "No strong net/cut/rangoli rule fired; treat as normal embroidery until teacher corrects.", 0.4 if is_normal else 0.0)
+
+    neck = "unknown"
+    if is_drop:
+        neck = "back_drop_neck"
+    elif is_pot:
+        neck = "pot_neck"
+    elif is_boat:
+        neck = "boat_neck"
+    elif is_u:
+        neck = "u_shaped_neck"
+    work = "normal_work"
+    if is_net:
+        work = "net_work"
+    elif is_cut:
+        work = "cut_work"
+    elif is_rangoli:
+        work = "rangoli_work"
+
+    return {
+        "version": "teacher_rule_pipeline_v5_4_4",
+        "neck_guess": neck,
+        "work_guess": work,
+        "primary_guess_before_memory": prediction.get("predicted_type"),
+        "image_mode": turbothinker.get("image_mode") or prediction.get("image_mode") or "single_design",
+        "rules": rules,
+        "student_sentence": f"Identify shape first ({neck}), then work type ({work}), then motif/hand/drop details.",
+    }
+
+
+def apply_teacher_rule_pipeline(analysis: Dict[str, Any]) -> Dict[str, Any]:
+    analysis = dict(analysis or {})
+    features = analysis.get("features") or {}
+    prediction = dict(analysis.get("prediction") or {})
+    breakdown = teacher_rule_breakdown(features, prediction, analysis.get("turbothinker") or {})
+    tags = list(prediction.get("tags") or [])
+    for tag in [breakdown.get("neck_guess"), breakdown.get("work_guess")]:
+        if tag and tag not in {"unknown", "normal_work"}:
+            tags.append(str(tag))
+    prediction["tags"] = ordered_unique_tags(tags, scores=prediction.get("scores") or {}, primary=str(prediction.get("predicted_type") or ""), image_mode=str(prediction.get("image_mode") or ""), limit=20, keep_engine_tags=True)
+    prediction["teacher_rule_pipeline"] = breakdown
+    analysis["prediction"] = prediction
+    analysis["teacher_rule_pipeline"] = breakdown
+    return analysis
+
 def analyze_image_for_training(img: Image.Image, source_name: str = "uploaded_image") -> Dict[str, Any]:
     features = extract_visual_features(img)
     turbothinker = infer_turbothinker_parts(features)
@@ -1190,7 +1281,7 @@ def analyze_image_for_training(img: Image.Image, source_name: str = "uploaded_im
         })
     # Add local explanation so the trainer can understand why it guessed the tag.
     prediction["reason"] = explain_prediction(features, prediction, turbothinker)
-    return {
+    result = {
         "version": IMGS_TRAINING_VERSION,
         "turbothinker_engine": TURBOTHINKER_ENGINE_VERSION,
         "source_name": source_name,
@@ -1202,6 +1293,7 @@ def analyze_image_for_training(img: Image.Image, source_name: str = "uploaded_im
         "features": features,
         "prediction": prediction,
     }
+    return apply_teacher_rule_pipeline(result)
 
 
 def analyze_preview_file(preview_path: Path, source_name: Optional[str] = None) -> Dict[str, Any]:
@@ -1420,11 +1512,11 @@ def _ultrabrain_crop_boxes(width: int, height: int) -> List[Tuple[str, Tuple[int
         ("top_band", (0, 0, w, int(h * 0.36))),
         ("middle_band", (0, int(h * 0.28), w, int(h * 0.72))),
         ("bottom_band", (0, int(h * 0.64), w, h)),
-        ("left_half", (0, 0, int(w * 244), h)),
+        ("left_half", (0, 0, int(w * 0.54), h)),
         ("right_half", (int(w * 0.46), 0, w, h)),
-        ("top_left", (0, 0, int(w * 242), int(h * 242))),
-        ("top_right", (int(w * 0.48), 0, w, int(h * 242))),
-        ("bottom_left", (0, int(h * 0.48), int(w * 242), h)),
+        ("top_left", (0, 0, int(w * 0.52), int(h * 0.52))),
+        ("top_right", (int(w * 0.48), 0, w, int(h * 0.52))),
+        ("bottom_left", (0, int(h * 0.48), int(w * 0.52), h)),
         ("bottom_right", (int(w * 0.48), int(h * 0.48), w, h)),
     ]
     clean: List[Tuple[str, Tuple[int, int, int, int]]] = []

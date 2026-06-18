@@ -1,40 +1,48 @@
-# EMBORGANIZER v5.4.3 Code Organization
+# EMBORGANIZER v5.4.4 Code Organization
 
 ## Main GUI
 
-- `streamlit_app.py` — polished full-site Streamlit shell with custom sidebar navigation and pages.
+- `streamlit_app.py` — full-site Streamlit shell with custom sidebar navigation, DST-first import, searcher, training, converter, Drive/Gmail pages, and animations.
 - `app.py` — local Streamlit launcher.
 
 ## Recognition / training
 
-- `imgs_training.py` — IMGS/TurboThinker local image analysis, corrections, selector training, and model training helpers.
+- `imgs_training.py` — IMGS/TurboThinker local visual analysis, teacher-rule pipeline, corrections, selector training, and local model training helpers.
 - `turbothinker_student.py` — student memory layer.
 - `turbothinker_ultrabrain.py` — region/feature memory layer.
-- `turbothinker_superbrain.py` — stronger KNN-like local memory.
-- `turbothinker_interactive_searcher.py` — teacher-rule searcher.
+- `turbothinker_superbrain.py` — stronger local memory layer.
+- `turbothinker_interactive_searcher.py` — teacher-rule text searcher.
 - `teacher_search_memory_v5_4.json` — corrected design naming memory.
+
+## DST / renderer / reader
+
+- `dst_converter.py` — DST/PES/JEF/etc. reader, converter, 4K preview generator, metadata/statistics collector.
+- `turboemb_engine.py` — TurboEmb Python bridge to optional C++ renderer.
+- `turboemb_cpp_renderer.cpp` — optional native renderer.
+- `legacy_fast_preview_renderer.cpp` — old v0.8.5 C++ renderer source kept for recovery/merge.
+- `legacy_imgs_engine.cpp` — old v0.8.5 image search/native helper source kept for recovery/merge.
 
 ## Search / import / cache
 
 - `imagesearch.py` — local fingerprint similarity engine.
 - `sync_engine.py` — local cache and manifest resync.
-- `sync_native.cpp` — optional C++ dedupe helper.
-- `library_manager.py` — maximum library manager helpers for filtering, relabeling, exports, backup, dedupe, and cleanup.
-
-## Converter / renderer
-
-- `dst_converter.py` — restored DST/image converter and design reader helpers.
-- `turboemb_engine.py` — TurboEmb v3 C++/Python renderer bridge.
-- `turboemb_cpp_renderer.cpp` — native renderer for fast high-quality stitch previews.
+- `sync_native.cpp` — optional C++ dedupe/helper.
+- `library_manager.py` — maximum library manager: filters, relabeling, exports, backup, dedupe, missing-file cleanup.
 
 ## Google / Gmail
 
-- `drive_gmail_bridge.py` — local OAuth config, public Drive download, authenticated Drive browser helpers, Gmail profile/recent-header helpers.
+- `drive_gmail_bridge.py` — current local Google OAuth, public Drive download, Drive browser, Gmail profile/recent header helpers.
+- `legacy_gdrive_sync_engine.py` — old v0.8.5 sync helper kept for merge/reference.
 - `local_config/` — private local Google secrets/tokens, ignored by git.
+
+## Speed / UI legacy assets
+
+- `legacy_speed_quality.py` — old speed/quality helper kept for merge/reference.
+- `static/legacy/` — old UI JS/CSS helpers kept for recovery.
 
 ## Data folders
 
-- `library/` — local imported images; ignored by git.
+- `library/` — local imported stitch previews/originals; ignored by git.
 - `cache/` — local search index/fingerprints; ignored by git.
 - `exports/` — converter outputs, backups, CSV/JSON exports; ignored by git.
 - `downloads/` — Drive downloads; ignored by git.
