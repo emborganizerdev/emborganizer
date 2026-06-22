@@ -1,5 +1,5 @@
 """
-EMBORGANIZER v5.4.4 DST-first Full Site Alive + Converters + Google Bridge
+EMBORGANIZER v6.0 Dashboard GUI + Folder Import + Conversion Timer
 
 Clean local UI for the v5.4 24MB brain-part build with an interactive teacher-rule searcher.
 Removed old/clutter pages from the visible app: Google Drive, external sign-in,
@@ -32,7 +32,7 @@ import streamlit as st
 from PIL import Image, ImageOps
 
 try:
-    from imgs_training import (
+    from imgs_engine_v6 import (
         IMGS_LABELS,
         IMGS_TRAINING_WARNING,
         IMGS_TRAINING_VERSION,
@@ -219,8 +219,8 @@ except Exception as exc:  # pragma: no cover
     save_google_config = None
 
 APP_NAME = "EMBORGANIZER"
-APP_VERSION = "v5.4.4"
-APP_RELEASE = "DST-first Full Site Alive + folder/ZIP import + meaningful reader + teacher-rule TurboThinker"
+APP_VERSION = "v6.0"
+APP_RELEASE = "Super Dashboard + folder import upload + clean converter cards + IMGS engine split"
 APP_ROOT = Path(__file__).resolve().parent
 SUPPORTED_IMAGE_TYPES = ["png", "jpg", "jpeg", "webp", "bmp"]
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
@@ -832,7 +832,7 @@ def import_embroidery_files_to_library(
     render_size: int = 2048,
     prefer_cpp: bool = True,
 ) -> Dict[str, Any]:
-    """Main v5.4.4 import path: DST/PES/JEF/etc → render PNG → analyze → fingerprint → cache."""
+    """Main v6.0 import path: DST/PES/JEF/etc → render PNG → analyze → fingerprint → cache."""
     import_id = f"dst_{_utc_stamp()}_{hashlib.sha1(import_name.encode('utf-8','ignore')).hexdigest()[:8]}"
     out_dir = _library_dir() / "imports" / import_id
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1028,6 +1028,62 @@ def animated_stepper(title: str, steps: List[str], active: int = 0) -> None:
     st.markdown(f'<div class="emb-stepper"><h4>{title}</h4><div class="emb-step-row">' + "".join(pieces) + "</div></div>", unsafe_allow_html=True)
 
 
+def _nav_to(target: str) -> None:
+    st.session_state["nav_override"] = target
+    st.rerun()
+
+
+def _dashboard_launch_card(title: str, detail: str, target: str, badges: List[str], key: str) -> None:
+    st.markdown(
+        "<div class='emb-dash-card'>"
+        f"<h3>{title}</h3>"
+        f"<p>{detail}</p>"
+        "<div class='emb-badge-row'>" + "".join(f"<span class='emb-badge'>{b}</span>" for b in badges) + "</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    if st.button(f"Open {title}", key=key, use_container_width=True):
+        _nav_to(target)
+
+
+def _show_conversion_record(count: int, output_format: str, elapsed_seconds: float, *, destination: str = "image") -> Dict[str, Any]:
+    elapsed = max(0.001, float(elapsed_seconds))
+    record = {
+        "count": int(count),
+        "output_format": str(output_format).upper(),
+        "seconds": round(elapsed, 3),
+        "rate_per_second": round(int(count) / elapsed, 3) if count else 0.0,
+        "destination": destination,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    st.session_state["last_conversion_record"] = record
+    st.markdown(
+        "<div class='emb-record-banner'>"
+        f"<h3>⚡ Record: {record['count']:,} design(s) converted to {record['output_format']} in {record['seconds']:.2f} seconds</h3>"
+        f"<p>Speed: {record['rate_per_second']:,} design(s)/second · Output: {destination}</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    return record
+
+
+def _show_clean_converter_details(meta: Dict[str, Any], out: Path) -> None:
+    bounds = meta.get("bounds") or {}
+    chips = [
+        f"engine: {meta.get('engine', 'local')}",
+        f"stitches: {int(meta.get('stitches') or 0):,}",
+        f"colors: {meta.get('estimated_thread_colors', 0)}",
+        f"density: {meta.get('density_score', 0)}",
+    ]
+    if bounds.get("width") and bounds.get("height"):
+        chips.append(f"design size: {bounds.get('width')} × {bounds.get('height')}")
+    if meta.get("output_size"):
+        chips.append(f"render: {meta.get('output_size')}")
+    st.markdown("".join(f"<span class='emb-detail-chip'>{c}</span>" for c in chips), unsafe_allow_html=True)
+    mime = "image/png" if out.suffix.lower() == ".png" else "image/jpeg" if out.suffix.lower() in {".jpg", ".jpeg"} else "image/webp"
+    _download_file_button(out, "Download converted image", mime)
+
+
 def _preview_import_rows(items: List[Dict[str, Any]], limit: int = 30) -> List[Dict[str, Any]]:
     rows = []
     for item in items[:limit]:
@@ -1145,6 +1201,16 @@ def init_page() -> None:
         .emb-mini-card {border:1px solid #e2e8f0; border-radius:18px; padding:.85rem; background:linear-gradient(135deg,#ffffff,#f8fafc);}
         .emb-mini-card b {display:block; color:#0f172a; margin-bottom:.2rem;}
         .emb-mini-card span {color:#64748b; font-size:.86rem;}
+        .emb-dash-card {min-height:138px; border:1px solid rgba(148,163,184,.38); border-radius:24px; padding:1rem; background:linear-gradient(135deg,#ffffff,#f8fafc 45%,#fff7ed); box-shadow:0 18px 40px rgba(15,23,42,.07); margin-bottom:.8rem;}
+        .emb-dash-card h3 {margin:.05rem 0 .35rem 0; color:#0f172a; letter-spacing:-.03em;}
+        .emb-dash-card p {margin:.15rem 0 .5rem 0; color:#64748b; font-size:.92rem;}
+        .emb-badge-row {display:flex; flex-wrap:wrap; gap:.35rem; margin:.35rem 0;}
+        .emb-badge {display:inline-flex; align-items:center; border-radius:999px; padding:.24rem .55rem; font-size:.76rem; font-weight:800; background:#e0f2fe; color:#075985;}
+        .emb-record-banner {border:1px solid rgba(34,197,94,.28); border-radius:24px; padding:1rem 1.1rem; background:linear-gradient(135deg,#ecfdf5,#f0f9ff); box-shadow:0 20px 44px rgba(15,23,42,.08); margin:.8rem 0 1rem 0;}
+        .emb-record-banner h3 {margin:.05rem 0 .25rem 0; color:#064e3b; letter-spacing:-.025em;}
+        .emb-record-banner p {margin:0; color:#0f766e; font-weight:700;}
+        .emb-detail-chip {display:inline-block; padding:.28rem .6rem; border-radius:999px; border:1px solid #e2e8f0; background:#fff; margin:.15rem .2rem .15rem 0; font-size:.84rem; color:#334155;}
+        .emb-launch-note {border:1px dashed #cbd5e1; border-radius:20px; padding:.8rem 1rem; background:#f8fafc; color:#475569; margin:.6rem 0 1rem 0;}
 
         </style>
         """,
@@ -1158,26 +1224,31 @@ def sidebar_nav() -> str:
         if logo.exists():
             st.image(str(logo), use_container_width=True)
         st.markdown(f"### {APP_NAME}")
-        st.caption(f"{APP_VERSION} · Full Site Alive")
+        st.caption(f"{APP_VERSION} · Super GUI")
+        nav_options = [
+            "Dashboard",
+            "DST to PNG Converter",
+            "Import Library",
+            "Image Searcher",
+            "TurboThinker GUI",
+            "Interactive Searcher",
+            "IMGS Training BETA",
+            "Teach / Train",
+            "Maximum Library Manager",
+            "Library Cache",
+            "Google Drive",
+            "Gmail Sign In",
+            "Brain Parts",
+            "Settings",
+        ]
+        if "nav_choice" not in st.session_state:
+            st.session_state["nav_choice"] = "Dashboard"
+        if st.session_state.get("nav_override") in nav_options:
+            st.session_state["nav_choice"] = st.session_state.pop("nav_override")
         nav = st.radio(
             "Navigation",
-            [
-                "Dashboard",
-                "DST to PNG Converter",
-                "4K Design Reader",
-                "Import Library",
-                "Image Searcher",
-                "TurboThinker GUI",
-                "Interactive Searcher",
-                "IMGS Training BETA",
-                "Teach / Train",
-                "Maximum Library Manager",
-                "Library Cache",
-                "Google Drive",
-                "Gmail Sign In",
-                "Brain Parts",
-                "Settings",
-            ],
+            nav_options,
+            key="nav_choice",
             label_visibility="collapsed",
         )
         st.divider()
@@ -1196,10 +1267,9 @@ def hero(title: str, text: str = "") -> None:
           <span class="emb-pill">TurboThinker SuperBrain</span>
           <span class="emb-pill">Interactive Searcher</span>
           <span class="emb-pill">Import + Image Searcher</span>
-          <span class="emb-pill">Full site alive</span>
+          <span class="emb-pill">Super dashboard</span>
           <span class="emb-pill">DST→PNG</span>
           <span class="emb-pill">Google Drive/Gmail</span>
-          <span class="emb-pill">4K C++ Reader</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1212,46 +1282,81 @@ def hero(title: str, text: str = "") -> None:
 # -----------------------------
 
 def dashboard_page() -> None:
-    hero("EMBORGANIZER Full Site", "v5.4.4 restores the full site with DST as the main import source: DST/PES/JEF folder import, ZIP import, 4K C++ reader, meaningful design summaries, Image Searcher, TurboThinker teacher-rule identification, Google Drive/Gmail, Library Manager, cache tools, and loading animations.")
+    hero("EMBORGANIZER v6 Command Center", "A cleaner launch dashboard: import folders/files, convert stitch designs, search the library, train IMGS, and manage cache without raw JSON clutter.")
     st.info(IMGS_TRAINING_WARNING)
-    with animated_loader("Loading TurboThinker brain status…", "Checking seed bank, corrections, SuperBrain memory, and 24MB brain parts", small=True):
+    with animated_loader("Loading v6 engine status…", "Checking IMGS engine, SuperBrain memory, library cache, and last conversion record", small=True):
         s = load_all_summaries()
     seed_summary = (s.get("seed") or {}).get("summary") or {}
     student = s.get("student") or {}
     ultra = s.get("ultrabrain") or {}
     super_s = s.get("superbrain") or {}
     parts = s.get("brain_parts") or {}
+    index = _load_search_index()
+    items = _as_list(index.get("items"))
+    last_record = st.session_state.get("last_conversion_record") or {}
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Seed images", f"{int(seed_summary.get('images_indexed') or 0):,}")
-    c2.metric("Corrections", f"{int((s.get('corrections') or {}).get('count') or 0):,}")
-    c3.metric("SuperBrain memory", f"{int(super_s.get('memory_rows') or super_s.get('knn_memory_rows') or 0):,}")
-    c4.metric("Brain parts", f"{int(parts.get('parts_count') or 0)}")
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Library designs", f"{len(items):,}")
+    c2.metric("Seed images", f"{int(seed_summary.get('images_indexed') or 0):,}")
+    c3.metric("Corrections", f"{int((s.get('corrections') or {}).get('count') or 0):,}")
+    c4.metric("SuperBrain rows", f"{int(super_s.get('memory_rows') or super_s.get('knn_memory_rows') or 0):,}")
+    c5.metric("Last timer", f"{last_record.get('seconds', 0):.2f}s" if last_record else "ready")
 
-    left, right = st.columns([1.15, .85])
-    with left:
-        st.markdown("#### Current engine")
-        st.markdown(f"**IMGS:** `{IMGS_TRAINING_VERSION}`")
-        st.markdown(f"**TurboThinker:** `{TURBOTHINKER_ENGINE_VERSION}`")
-        st.markdown(f"**SuperBrain:** `{SUPERBRAIN_VERSION}`")
-        if parts.get("ok"):
-            st.success(f"Brain-part model is GitHub-safe. Largest/part checked under 25 MB. Total: {parts.get('total_mb')} MB")
-        else:
-            st.warning("Brain-part manifest is missing or a part failed the under-25MB check.")
-    with right:
-        st.markdown("#### Model summaries")
-        st.json({
-            "student": {k: student.get(k) for k in ("exists", "labels", "rows", "epochs") if k in student},
-            "ultrabrain": {k: ultra.get(k) for k in ("exists", "labels_with_weights", "knn_memory_rows", "rows") if k in ultra},
-            "superbrain": {k: super_s.get(k) for k in ("exists", "labels", "memory_rows", "cortex_features", "training_rows") if k in super_s},
-            "brain_parts": parts,
-        })
+    st.markdown("### 🚀 GUI launch board")
+    st.markdown("<div class='emb-launch-note'>Open every main tool from here. The old folder-path scan and legacy image import clutter are removed from the visible import flow.</div>", unsafe_allow_html=True)
+    row1 = st.columns(4)
+    with row1[0]:
+        _dashboard_launch_card("Convert", "DST/PES/JEF/etc. → PNG/JPG/WEBP with a live record timer.", "DST to PNG Converter", ["timer", "PNG/JPG", "batch"], "dash_convert")
+    with row1[1]:
+        _dashboard_launch_card("Import", "Folder-style upload, file upload, or DST ZIP into the searchable library.", "Import Library", ["folder upload", "no path box", "DST first"], "dash_import")
+    with row1[2]:
+        _dashboard_launch_card("Search", "Search by DST or image against cached previews and fingerprints.", "Image Searcher", ["visual match", "fingerprint", "local"], "dash_search")
+    with row1[3]:
+        _dashboard_launch_card("Teacher GUI", "Read one design, correct the label, and save training memory.", "TurboThinker GUI", ["correction", "tags", "teacher"], "dash_teacher")
 
-    st.markdown("#### Clean UI kept")
-    st.write("Dashboard · DST Import Library · DST/Image Searcher · TurboThinker GUI · Interactive Searcher · IMGS Training BETA · Teach/Train · Library Cache · Brain Parts · Settings")
-    st.markdown("#### Removed from visible UI")
-    st.write("Only external API/sign-in pages remain hidden. Local import, local image search, local training, selector reader, and cache pages are restored inside the clean main GUI.")
+    row2 = st.columns(4)
+    with row2[0]:
+        _dashboard_launch_card("Interactive Search", "Ask for neck/work/type features and browse result cards.", "Interactive Searcher", ["filters", "rules", "fast"], "dash_interactive")
+    with row2[1]:
+        _dashboard_launch_card("IMGS Engine", "Train the separated v6 IMGS engine from images and corrections.", "IMGS Training BETA", ["v6 split", "train", "local"], "dash_imgs")
+    with row2[2]:
+        _dashboard_launch_card("Library Manager", "Filter, relabel, dedupe, export, and clean your design records.", "Maximum Library Manager", ["manage", "dedupe", "export"], "dash_manager")
+    with row2[3]:
+        _dashboard_launch_card("Cache", "Rebuild manifests and refresh the fast library cache.", "Library Cache", ["resync", "cache", "fast"], "dash_cache")
 
+    row3 = st.columns(5)
+    with row3[0]:
+        _dashboard_launch_card("Teach / Train", "Review corrections and run the training loop.", "Teach / Train", ["teacher", "learn", "local"], "dash_teach_train")
+    with row3[1]:
+        _dashboard_launch_card("Brain Parts", "Check GitHub-safe brain shards and storage status.", "Brain Parts", ["24MB", "manifest", "safe"], "dash_brain")
+    with row3[2]:
+        _dashboard_launch_card("Google Drive", "Open the optional Drive bridge panel.", "Google Drive", ["optional", "bridge"], "dash_drive")
+    with row3[3]:
+        _dashboard_launch_card("Gmail", "Open the optional Gmail sign-in panel.", "Gmail Sign In", ["optional", "bridge"], "dash_gmail")
+    with row3[4]:
+        _dashboard_launch_card("Settings", "Check version, runtime paths, and engine bridge setup.", "Settings", ["v6", "paths", "setup"], "dash_settings")
+
+    st.markdown("### ✨ Engine status")
+    e1, e2, e3, e4 = st.columns(4)
+    label_value = super_s.get("labels")
+    label_count = len(label_value) if isinstance(label_value, (list, tuple, set, dict)) else int(label_value or 0)
+    e1.success(f"IMGS: {str(IMGS_TRAINING_VERSION)[:70]}")
+    e2.info(f"TurboThinker: {str(TURBOTHINKER_ENGINE_VERSION)[:70]}")
+    e3.info(f"SuperBrain labels: {label_count:,}")
+    if parts.get("ok"):
+        e4.success(f"Brain parts OK · {parts.get('parts_count', 0)} part(s)")
+    else:
+        e4.warning("Brain parts need check")
+
+    if last_record:
+        st.markdown("### 🏁 Latest conversion timer")
+        _show_conversion_record(int(last_record.get("count") or 0), str(last_record.get("output_format") or "PNG"), float(last_record.get("seconds") or 0.001), destination=str(last_record.get("destination") or "image"))
+
+    with st.expander("Compact model counts"):
+        st.write(
+            f"Student rows: {student.get('rows', 0)} · Ultrabrain rows: {ultra.get('rows') or ultra.get('knn_memory_rows', 0)} · "
+            f"SuperBrain features: {super_s.get('cortex_features', 0)} · Brain storage: {parts.get('total_mb', 'unknown')} MB"
+        )
 
 def turbothinker_gui_page() -> None:
     hero("TurboThinker GUI", "Upload one embroidery preview/image, see the local prediction, then save a correction if needed.")
@@ -1349,7 +1454,7 @@ def interactive_searcher_page() -> None:
             st.info("No teacher-rule memory file found yet.")
 
     st.markdown("### Search controls")
-    c0, c1, c2 = st.columns([1.25, 0.85, 0.85])
+    c0, c1, c2 = st.columns([1.35, 0.85, 0.85])
     with c0:
         query = st.text_input(
             "Search words or design number",
@@ -1360,28 +1465,23 @@ def interactive_searcher_page() -> None:
     with c2:
         neck_type = st.selectbox("Neck type", NECK_TYPE_OPTIONS, index=0)
 
-    c3, c4, c5 = st.columns([0.85, 0.85, 1.3])
+    c3, c4, c5 = st.columns([0.85, 0.85, 0.85])
     with c3:
         dress_type = st.selectbox("Dress type", DRESS_TYPE_OPTIONS, index=0)
     with c4:
         feature = st.selectbox("Feature", FEATURE_OPTIONS, index=0)
     with c5:
-        extra_dir = st.text_input("Optional folder to scan", placeholder="C:/designs or /home/me/designs")
+        limit = st.slider("Result limit", 5, 100, 30, 5)
 
-    c6, c7, c8, c9 = st.columns(4)
+    c6, c7, c8 = st.columns(3)
     include_memory = c6.checkbox("Teacher memory", value=True)
     include_corrections = c7.checkbox("Corrections", value=True)
     include_index = c8.checkbox("Training index", value=True)
-    include_images = c9.checkbox("Scan image files", value=False)
 
-    c10, c11 = st.columns([0.85, 0.85])
-    confirmed_only = c10.checkbox("Teacher-confirmed only", value=False)
-    limit = c11.slider("Result limit", 5, 100, 30, 5)
-
-    extra_dirs = [extra_dir] if extra_dir.strip() else []
-    loader_detail = "Reading teacher memory, corrections, training index"
-    if include_images or extra_dirs:
-        loader_detail += ", and local image folders"
+    confirmed_only = st.checkbox("Teacher-confirmed only", value=False)
+    include_images = False
+    extra_dirs: List[str] = []
+    loader_detail = "Reading teacher memory, corrections, and training index"
     with animated_loader("Searching/loading design database…", loader_detail, small=True):
         records = build_search_records(
             APP_ROOT,
@@ -1418,7 +1518,7 @@ def interactive_searcher_page() -> None:
 
     st.markdown(f"### Results ({len(results)})")
     if not results:
-        st.warning("No matching design found. Try fewer filters or scan a local folder.")
+        st.warning("No matching design found. Try fewer filters or import more designs from the Import Library.")
         return
 
     compact_rows = []
@@ -1469,33 +1569,57 @@ def interactive_searcher_page() -> None:
 
 
 def import_library_page() -> None:
-    hero("DST Import Library", "DST/PES/JEF/etc. are now the main source. The app renders stitch files to PNG, reads stitch stats, runs TurboThinker, builds fingerprints, and stores meaningful searchable records.")
-    animated_stepper("DST import pipeline", ["Upload/Folder", "Render DST", "Read design", "Fingerprint", "Index"], active=0)
-    st.info("Local-only import. File name is saved only as a record name; the design label comes from rendered visual analysis + teacher rules/corrections.")
+    hero("v6 Import Library", "Clean DST-first import: folder-style upload, multiple design files, or DST ZIP. No local folder path box and no legacy image ZIP/scan options in the visible GUI.")
+    animated_stepper("Import pipeline", ["Choose", "Render", "Read", "Fingerprint", "Index"], active=0)
+    st.info("Folder import now works through browser upload: select or drag the designs from a folder. The app never asks for a local folder path.")
 
     emb_types = sorted([x.lstrip(".") for x in EMBROIDERY_EXTENSIONS])
     mode = st.radio(
         "Import source",
-        ["DST / embroidery files", "ZIP of DST / embroidery", "Scan local DST folder", "Image files (legacy)", "Image ZIP (legacy)", "Scan image folder (legacy)"],
+        ["Folder import (DST files)", "DST / embroidery files", "DST ZIP batch"],
         horizontal=False,
     )
     c1, c2, c3, c4, c5 = st.columns(5)
     analyze = c1.checkbox("Auto visual analysis", value=True)
     build_fp = c2.checkbox("Build fingerprints", value=True)
     limit = c3.number_input("Import limit", min_value=1, max_value=100000, value=300, step=50)
-    render_size = int(c4.selectbox("DST render size", ["1024", "2048", "4096"], index=1))
+    render_size = int(c4.selectbox("DST render size", ["1024", "2048", "3000"], index=1))
     prefer_cpp = c5.checkbox("C++ Turbo", value=True)
     show_preview = st.checkbox("Show imported table", value=True)
 
-    if mode == "DST / embroidery files":
+    if mode == "Folder import (DST files)":
+        st.markdown("#### Folder import")
+        st.caption("Select all DST/PES/JEF/etc. files from a folder, or drag the folder/files into this uploader. No typed folder path is needed.")
+        files = st.file_uploader("Import a folder worth of embroidery files", type=emb_types, accept_multiple_files=True, key="import_dst_folder_upload")
+        if files and st.button("Import folder files to searchable library", type="primary"):
+            bar = st.progress(0, text="Preparing folder import…")
+            animated_stepper("Folder import pipeline", ["Files", "Render", "Read", "Fingerprint", "Search ready"], active=1)
+            start_time = time.perf_counter()
+            with animated_loader("Importing folder files…", "Rendering stitch files, reading density/colors/bounds, and building local search cache"):
+                bar.progress(15, text="Folder files received")
+                result = import_embroidery_files_to_library(files, import_name="folder_import", analyze=analyze, build_fingerprints=build_fp, limit=int(limit), render_size=render_size, prefer_cpp=prefer_cpp)
+                bar.progress(100, text="Folder import complete")
+            elapsed = time.perf_counter() - start_time
+            _show_conversion_record(len(result.get("items", [])), "PNG", elapsed, destination="searchable library")
+            st.success(f"Imported {len(result.get('items', [])):,} stitch designs. Search index now has {result.get('index_count', 0):,} records.")
+            if result.get("errors"):
+                st.warning(f"Some files could not import: {len(result['errors'])}")
+                st.dataframe(result["errors"], use_container_width=True, hide_index=True)
+            if show_preview and result.get("items"):
+                st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
+
+    elif mode == "DST / embroidery files":
         files = st.file_uploader("Upload DST/PES/JEF/etc. files", type=emb_types, accept_multiple_files=True, key="import_dst_files")
         if files and st.button("Import DST files to searchable library", type="primary"):
             bar = st.progress(0, text="Preparing DST import…")
             animated_stepper("DST import pipeline", ["Upload", "Render", "Read", "Fingerprint", "Search ready"], active=1)
+            start_time = time.perf_counter()
             with animated_loader("Importing DST files…", "Rendering stitch files, reading density/colors/bounds, and building local search cache"):
                 bar.progress(15, text="Uploaded DST files")
                 result = import_embroidery_files_to_library(files, import_name="dst_upload", analyze=analyze, build_fingerprints=build_fp, limit=int(limit), render_size=render_size, prefer_cpp=prefer_cpp)
                 bar.progress(100, text="DST import complete")
+            elapsed = time.perf_counter() - start_time
+            _show_conversion_record(len(result.get("items", [])), "PNG", elapsed, destination="searchable library")
             st.success(f"Imported {len(result.get('items', [])):,} stitch designs. Search index now has {result.get('index_count', 0):,} records.")
             if result.get("errors"):
                 st.warning(f"Some DST files could not import: {len(result['errors'])}")
@@ -1514,77 +1638,24 @@ def import_library_page() -> None:
                             st.write((item.get("meaningful_summary") or {}).get("stitch_summary") or "Rendered DST preview.")
                             st.write("Tags: " + " · ".join(f"`{x}`" for x in _as_list(item.get("tags"))[:10]))
 
-    elif mode == "ZIP of DST / embroidery":
+    else:
         zip_file = st.file_uploader("Upload ZIP containing DST/PES/JEF/etc.", type=["zip"], key="import_dst_zip")
         if zip_file and st.button("Import DST ZIP to searchable library", type="primary"):
             bar = st.progress(0, text="Opening DST ZIP…")
             animated_stepper("DST ZIP pipeline", ["Upload", "Extract DST", "Render", "Fingerprint", "Index"], active=1)
+            start_time = time.perf_counter()
             with animated_loader("Importing DST ZIP…", "Extracting stitch files, rendering previews, analyzing, and indexing"):
                 bar.progress(12, text="ZIP uploaded")
                 result = import_embroidery_zip_to_library(zip_file.getvalue(), zip_name=zip_file.name, analyze=analyze, build_fingerprints=build_fp, limit=int(limit), render_size=render_size, prefer_cpp=prefer_cpp)
                 bar.progress(100, text="DST ZIP import complete")
+            elapsed = time.perf_counter() - start_time
+            _show_conversion_record(len(result.get("items", [])), "PNG", elapsed, destination="searchable library")
             st.success(f"Imported {len(result.get('items', [])):,} stitch designs from ZIP. Search index now has {result.get('index_count', 0):,} records.")
             if result.get("errors"):
                 with st.expander("Import errors"):
                     st.dataframe(result["errors"], use_container_width=True, hide_index=True)
             if show_preview and result.get("items"):
                 st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
-
-    elif mode == "Scan local DST folder":
-        folder = st.text_input("Local folder path containing DST/PES/JEF/etc.", placeholder="C:/designs/dst or /home/me/designs")
-        st.caption("Folder path works when you run EMBORGANIZER on your own computer/server. Browser folder upload is handled by the file uploader/ZIP import.")
-        if st.button("Scan DST folder into search cache", type="primary"):
-            if not folder.strip():
-                st.warning("Enter a local folder path first.")
-            else:
-                with animated_loader("Scanning DST folder…", "Rendering every stitch file, reading stats, and updating cache"):
-                    result = scan_embroidery_folder_to_index(folder, analyze=analyze, build_fingerprints=build_fp, limit=int(limit), render_size=render_size, prefer_cpp=prefer_cpp)
-                st.success(f"Added {len(result.get('items', [])):,} stitch records. Search index now has {result.get('index_count', 0):,} records.")
-                if result.get("errors"):
-                    with st.expander("Scan errors"):
-                        st.dataframe(result["errors"], use_container_width=True, hide_index=True)
-                if show_preview and result.get("items"):
-                    st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
-
-    elif mode == "Image files (legacy)":
-        files = st.file_uploader("Upload one or more embroidery images", type=SUPPORTED_IMAGE_TYPES, accept_multiple_files=True, key="import_images")
-        if files and st.button("Import images to searchable library", type="primary"):
-            bar = st.progress(0, text="Preparing image import…")
-            with animated_loader("Importing images…", "Saving images, reading visually, and creating local fingerprints"):
-                result = import_images_to_library(files, import_name="image_upload", analyze=analyze, build_fingerprints=build_fp, limit=int(limit))
-                bar.progress(100, text="Import complete")
-            st.success(f"Imported {len(result.get('items', [])):,} images. Search index now has {result.get('index_count', 0):,} records.")
-            if result.get("errors"):
-                st.dataframe(result["errors"], use_container_width=True, hide_index=True)
-            if show_preview and result.get("items"):
-                st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
-
-    elif mode == "Image ZIP (legacy)":
-        zip_file = st.file_uploader("Upload ZIP of embroidery images", type=["zip"], key="import_zip")
-        if zip_file and st.button("Import image ZIP to searchable library", type="primary"):
-            with animated_loader("Importing image ZIP…", "Extracting images, analyzing design type, and building fingerprints"):
-                result = import_zip_to_library(zip_file.getvalue(), zip_name=zip_file.name, analyze=analyze, build_fingerprints=build_fp, limit=int(limit))
-            st.success(f"Imported {len(result.get('items', [])):,} images from ZIP. Search index now has {result.get('index_count', 0):,} records.")
-            if result.get("errors"):
-                with st.expander("Import errors"):
-                    st.dataframe(result["errors"], use_container_width=True, hide_index=True)
-            if show_preview and result.get("items"):
-                st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
-
-    else:
-        folder = st.text_input("Local image folder path to scan", placeholder="C:/designs/previews or /home/me/designs")
-        if st.button("Scan image folder into search cache", type="primary"):
-            if not folder.strip():
-                st.warning("Enter a local folder path first.")
-            else:
-                with animated_loader("Scanning image folder…", "Reading images and adding them to the fast search cache"):
-                    result = scan_folder_to_index(folder, analyze=analyze, build_fingerprints=build_fp, limit=int(limit))
-                st.success(f"Added {len(result.get('items', [])):,} records. Search index now has {result.get('index_count', 0):,} records.")
-                if result.get("errors"):
-                    with st.expander("Scan errors"):
-                        st.dataframe(result["errors"], use_container_width=True, hide_index=True)
-                if show_preview and result.get("items"):
-                    st.dataframe(_preview_import_rows(result["items"]), use_container_width=True, hide_index=True)
 
     st.divider()
     index = _load_search_index()
@@ -1597,8 +1668,16 @@ def import_library_page() -> None:
     c4.metric("Image search", "ready" if compare_fingerprints is not None else "missing")
 
     with st.expander("Recent imports"):
-        st.json(_json_read(_import_log_path(), {"imports": []}))
-
+        recent = (_json_read(_import_log_path(), {"imports": []}).get("imports") or [])[-12:]
+        if recent:
+            st.dataframe([{
+                "when": str(r.get("created_at", ""))[:19],
+                "source": r.get("source_type") or r.get("name"),
+                "items": r.get("items"),
+                "errors": len(r.get("errors") or []),
+            } for r in recent], use_container_width=True, hide_index=True)
+        else:
+            st.caption("No imports yet.")
 
 def image_searcher_page() -> None:
     hero("DST / Image Searcher", "Search the local library with a DST/PES/JEF file or an image. DST queries are rendered first, then classified and matched against cached previews.")
@@ -1611,7 +1690,7 @@ def image_searcher_page() -> None:
     c1.metric("Search cache", f"{total:,}")
     strict_type = c2.checkbox("Divide-and-rule type filter", value=True, help="First classify the query, then search matching type/tag records first.")
     limit = c3.slider("Top matches", 5, 80, 20, 5)
-    render_size = int(c4.selectbox("DST query render", ["1024", "2048", "4096"], index=1))
+    render_size = int(c4.selectbox("DST query render", ["1024", "2048", "3000"], index=1))
 
     query_kind = st.radio("Search by", ["DST / embroidery file", "Image file"], horizontal=True)
     img: Optional[Image.Image] = None
@@ -1692,13 +1771,14 @@ def image_searcher_page() -> None:
                     st.write(ms.get("stitch_summary"))
                 st.write("Tags: " + " · ".join(f"`{x}`" for x in _as_list(row.get("tags"))[:14]))
                 match = row.get("match") or {}
-                with st.expander("Verification details"):
-                    st.json({
-                        "algorithm": match.get("algorithm"),
-                        "parts": match.get("parts"),
-                        "verification": match.get("verification"),
-                        "meaningful_summary": ms,
-                    })
+                parts = match.get("parts") or {}
+                with st.expander("Clean verification summary"):
+                    st.write(
+                        f"Algorithm: {match.get('algorithm', 'local fingerprint')} · "
+                        f"Shape: {parts.get('shape', parts.get('shape_score', 'n/a'))} · "
+                        f"Texture: {parts.get('texture', parts.get('texture_score', 'n/a'))} · "
+                        f"Color: {parts.get('color', parts.get('color_score', 'n/a'))}"
+                    )
 
 
 def imgs_training_beta_page() -> None:
@@ -1947,20 +2027,20 @@ def _download_file_button(path: Path, label: str, mime: str = "application/octet
 
 
 def dst_to_png_converter_page() -> None:
-    hero("DST to PNG Converter", "The main legacy converter is back: DST/PES/JEF/etc. to PNG/JPG/WEBP using local TurboEmb, optional C++ renderer, 4K output, and loading animations.")
+    hero("DST to PNG/JPG Converter", "Clean v6 converter for DST/PES/JEF/etc. to PNG/JPG/WEBP. It shows a record timer and friendly cards instead of raw JSON blocks.")
     st.caption(str(DST_CONVERTER_VERSION))
     status = cpp_status() if cpp_status is not None else {"available": False, "message": "C++ status unavailable"}
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("C++ Turbo", "ready" if status.get("available") else "fallback")
     c2.metric("Renderer", status.get("message", "unknown")[:36])
-    c3.metric("Max output", "4K")
+    c3.metric("Formats", "PNG/JPG/WEBP")
     c4.metric("Mode", "local only")
 
-    animated_stepper("Converter pipeline", ["Upload", "Read stitches", "C++/Python render", "Save PNG", "Preview/download"], active=0)
-    mode = st.radio("Converter source", ["Single / multiple files", "ZIP batch"], horizontal=True)
+    animated_stepper("Converter pipeline", ["Upload", "Read stitches", "Render", "Save image", "Download"], active=0)
+    mode = st.radio("Converter source", ["Folder/file upload", "ZIP batch"], horizontal=True)
     c1, c2, c3 = st.columns(3)
-    output_format = c1.selectbox("Output format", ["PNG", "WEBP", "JPG"], index=0)
-    size_label = c2.selectbox("Render size", ["1024", "2048", "3000", "4096"], index=1)
+    output_format = c1.selectbox("Output format", ["PNG", "JPG", "WEBP"], index=0)
+    size_label = c2.selectbox("Render size", ["1024", "2048", "3000"], index=1)
     prefer_cpp = c3.checkbox("Use C++ Turbo when available", value=True)
     size = int(size_label)
     out_dir = _exports_dir("converter")
@@ -1970,13 +2050,15 @@ def dst_to_png_converter_page() -> None:
         st.error("Converter module is unavailable. Check dst_converter.py.")
         return
 
-    if mode == "Single / multiple files":
+    if mode == "Folder/file upload":
+        st.caption("Select multiple files from a folder or drag them here. No local folder path box is used.")
         files = st.file_uploader("Upload embroidery design files", type=emb_types, accept_multiple_files=True, key="dst_converter_files")
         if files and st.button("Convert to image", type="primary"):
             results = []
             errors = []
             progress = st.progress(0, text="Starting converter…")
-            with animated_loader("Converting embroidery files…", "Reading stitch data, rendering with TurboEmb/C++, and saving preview images"):
+            start_time = time.perf_counter()
+            with animated_loader("Converting embroidery files…", "Reading stitch data, rendering locally, and saving clean preview images"):
                 for i, f in enumerate(files, start=1):
                     try:
                         progress.progress(int((i - 1) / max(1, len(files)) * 100), text=f"Converting {f.name}")
@@ -1985,6 +2067,8 @@ def dst_to_png_converter_page() -> None:
                     except Exception as exc:
                         errors.append({"file": f.name, "error": str(exc)[:240]})
                 progress.progress(100, text="Conversion complete")
+            elapsed = time.perf_counter() - start_time
+            _show_conversion_record(len(results), output_format, elapsed, destination="download folder")
             st.success(f"Converted {len(results)} file(s).")
             if errors:
                 st.warning(f"{len(errors)} file(s) could not convert.")
@@ -2010,10 +2094,7 @@ def dst_to_png_converter_page() -> None:
                                 st.image(str(out), use_container_width=True)
                         with cc2:
                             st.markdown(f"#### {meta.get('input_name')}")
-                            st.caption(f"{meta.get('engine')} · {meta.get('stitches')} stitches · {meta.get('estimated_thread_colors')} colors")
-                            st.json({k: meta.get(k) for k in ["bounds", "density_score", "reader", "converter_version"]})
-                            mime = "image/png" if out.suffix.lower() == ".png" else "image/jpeg" if out.suffix.lower() in {".jpg", ".jpeg"} else "image/webp"
-                            _download_file_button(out, "Download converted image", mime)
+                            _show_clean_converter_details(meta, out)
                 if len(results) > 1:
                     zip_path = out_dir / f"converted_images_{int(time.time())}.zip"
                     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -2030,72 +2111,37 @@ def dst_to_png_converter_page() -> None:
             if convert_zip_bytes is None:
                 st.error("ZIP converter is unavailable.")
             else:
+                start_time = time.perf_counter()
                 with animated_loader("Batch converting ZIP…", "Extracting embroidery files and rendering previews"):
                     result = convert_zip_bytes(zip_file.getvalue(), zip_file.name, out_dir, size=size, output_format=output_format, limit=int(limit), prefer_cpp=prefer_cpp)
-                st.success(f"Converted {result.get('count', 0)} embroidery files.")
+                elapsed = time.perf_counter() - start_time
+                converted_count = int(result.get("count") or len(result.get("converted") or []))
+                _show_conversion_record(converted_count, output_format, elapsed, destination="ZIP bundle")
+                st.success(f"Converted {converted_count} embroidery files.")
                 if result.get("errors"):
                     with st.expander("Conversion errors"):
                         st.dataframe(result["errors"], use_container_width=True, hide_index=True)
                 bundle = Path(str(result.get("bundle_path") or ""))
                 _download_file_button(bundle, "Download converted ZIP", "application/zip")
                 if result.get("converted"):
-                    st.dataframe([{ "file": x.get("input_name"), "stitches": x.get("stitches"), "engine": x.get("engine"), "output": Path(str(x.get("output_path"))).name } for x in result["converted"][:200]], use_container_width=True, hide_index=True)
-
-
-def design_reader_4k_page() -> None:
-    hero("4K Design Reader", "Render stitch files up to 4K, read stitch counts/density/colors, then send the rendered design into TurboThinker for visual classification.")
-    st.caption(str(DST_CONVERTER_VERSION))
-    status = cpp_status() if cpp_status is not None else {"available": False, "message": "C++ status unavailable"}
-    st.info(f"C++ Turbo status: {status.get('message')}")
-    kind = st.radio("Read from", ["Embroidery file", "Image file"], horizontal=True)
-    c1, c2 = st.columns(2)
-    render_size = int(c1.selectbox("Reader render size", ["1024", "2048", "4096"], index=1))
-    use_cpp = c2.checkbox("Use C++ render engine", value=True)
-
-    if kind == "Embroidery file":
-        emb_types = sorted([x.lstrip(".") for x in SUPPORTED_EMB_EXTENSIONS])
-        f = st.file_uploader("Upload DST/PES/JEF/etc. to read", type=emb_types, key="reader_emb")
-        if not f:
-            st.caption("Upload a DST to see stitch stats, 4K preview, and TurboThinker visual tags.")
-            return
-        out_dir = _exports_dir("reader")
-        with animated_loader("Reading stitch file…", "Parsing commands, rendering 4K preview, calculating density, and classifying visual design"):
-            meta = convert_uploaded_bytes(f.getvalue(), f.name, out_dir, size=render_size, output_format="PNG", prefer_cpp=use_cpp)
-        out = Path(str(meta.get("output_path") or ""))
-        c_img, c_stats = st.columns([0.55, 1.0])
-        with c_img:
-            if out.exists():
-                st.image(str(out), caption=out.name, use_container_width=True)
-                _download_file_button(out, "Download rendered PNG", "image/png")
-        with c_stats:
-            st.markdown("### Stitch reader result")
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Stitches", f"{int(meta.get('stitches') or 0):,}")
-            m2.metric("Colors", meta.get("estimated_thread_colors", 0))
-            m3.metric("Density", meta.get("density_score", 0))
-            m4.metric("Engine", str(meta.get("engine", "reader"))[:18])
-            st.json({k: meta.get(k) for k in ["bounds", "reader", "palette_preview", "estimated_length_units", "max_jump_units"]})
-        if out.exists():
-            with Image.open(out) as rendered:
-                analysis_img = rendered.convert("RGB")
-            with animated_loader("TurboThinker reading rendered design…", "Detecting work type, neck style, motifs, and training tags", small=True):
-                analysis = _run_full_analysis(analysis_img, out.name)
-            _show_prediction_card(analysis)
-            _show_identification_breakdown(analysis)
-    else:
-        f = st.file_uploader("Upload image for 4K visual read", type=SUPPORTED_IMAGE_TYPES, key="reader_img")
-        if not f:
-            return
-        img = _image_from_upload(f)
-        c1, c2 = st.columns([0.5, 1.0])
-        with c1:
-            st.image(img, caption=f.name, use_container_width=True)
-        with c2:
-            with animated_loader("TurboThinker reading image…", "Detecting design class and features", small=True):
-                analysis = _run_full_analysis(img, f.name)
-            _show_prediction_card(analysis)
-            _show_identification_breakdown(analysis)
-
+                    st.dataframe([{
+                        "file": x.get("input_name"),
+                        "stitches": x.get("stitches"),
+                        "colors": x.get("estimated_thread_colors"),
+                        "engine": x.get("engine"),
+                        "output": Path(str(x.get("output_path"))).name,
+                    } for x in result["converted"][:200]], use_container_width=True, hide_index=True)
+                    st.markdown("### Preview cards")
+                    for meta in result["converted"][:12]:
+                        out = Path(str(meta.get("output_path") or ""))
+                        with st.container(border=True):
+                            cc1, cc2 = st.columns([0.45, 1.0])
+                            with cc1:
+                                if out.exists():
+                                    st.image(str(out), use_container_width=True)
+                            with cc2:
+                                st.markdown(f"#### {meta.get('input_name')}")
+                                _show_clean_converter_details(meta, out)
 
 def maximum_library_manager_page() -> None:
     hero("Maximum Library Manager", "Manage the full local library: filter, preview, relabel, dedupe, remove missing records, export, backup, and resync.")
@@ -2339,7 +2385,7 @@ def brain_parts_page() -> None:
 
 
 def settings_page() -> None:
-    hero("Settings", "Clean local setup details.")
+    hero("Settings", "v6 local setup details.")
     st.markdown("### Visible UI version")
     st.write(f"`{APP_VERSION} — {APP_RELEASE}`")
     st.markdown("### Runtime paths")
@@ -2347,9 +2393,10 @@ def settings_page() -> None:
         "app_root": str(APP_ROOT),
         "brain_manifest": brain_part_status().get("manifest_path"),
         "training_root": str(APP_ROOT / "imgs_training"),
+        "imgs_engine_bridge": str(APP_ROOT / "imgs_engine_v6.py"),
     })
     st.markdown("### Cleaned out of the navigation")
-    st.write("External API/sign-in panels and duplicate Streamlit page sidebar. Local import, local search, local training, cache/resync, selector reader, and teacher search are visible again.")
+    st.write("Old high-res reader page, typed folder-path scan, legacy image ZIP/import, and noisy raw converter JSON are removed from the visible GUI. The IMGS engine now has a separate v6 bridge module.")
     st.markdown("### Raw engine access")
     if st.checkbox("Show full local model summaries"):
         with animated_loader("Loading full local model summaries…", "Reading all summary files", small=True):
@@ -2369,8 +2416,6 @@ def main() -> None:
         dashboard_page()
     elif nav == "DST to PNG Converter":
         dst_to_png_converter_page()
-    elif nav == "4K Design Reader":
-        design_reader_4k_page()
     elif nav == "Import Library":
         import_library_page()
     elif nav == "Image Searcher":

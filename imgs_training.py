@@ -97,8 +97,8 @@ except Exception:  # pragma: no cover
     predict_superbrain_vector = None
     superbrain_model_path = None
 
-IMGS_TRAINING_VERSION = "IMGS BetaV1 + TurboThinker SuperBrain Local Recognition Engine v5.4.4"
-TURBOTHINKER_ENGINE_VERSION = "TurboThinker v5.4.4 • DST-first reader + teacher-rule decision pipeline + 24MB SuperBrain"
+IMGS_TRAINING_VERSION = "IMGS Engine v6.0 + TurboThinker SuperBrain Local Recognition"
+TURBOTHINKER_ENGINE_VERSION = "TurboThinker v6.0 • folder import + clean GUI + timer + 24MB SuperBrain"
 IMGS_TRAINING_TAG = "IMGS Engine"
 TURBOTHINKER_TAG = "TurboThinker Engine"
 IMGS_TRAINING_WARNING = (
@@ -1169,7 +1169,7 @@ def infer_turbothinker_parts(features: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def teacher_rule_breakdown(features: Dict[str, Any], prediction: Dict[str, Any], turbothinker: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Transparent decision pipeline used in v5.4.4.
+    """Transparent decision pipeline used in v6.0.
 
     It shows how the local reader identifies a design: shape first, then work type,
     then motifs/parts. Teacher corrections still override this local guess.
